@@ -56,6 +56,12 @@ if api_key:
 
     def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
         start_time = time.time()
+        
+        # Create a placeholder for the status message
+        status_placeholder = st.empty()
+        status_placeholder.info("Generating image...")
+
+        # Submit the request
         handler = fal_client.submit(
             "fal-ai/flux-pro",
             {
@@ -69,24 +75,13 @@ if api_key:
             }
         )
         
-        # Create a placeholder for the status message
-        status_placeholder = st.empty()
+        # Wait for the result
+        result = handler.get()
         
-        while True:
-            elapsed_time = time.time() - start_time
-            status_placeholder.info(f"Generating image... (Elapsed time: {elapsed_time:.2f} seconds)")
-            
-            try:
-                result = handler.get(timeout=0.1)  # Try to get the result with a short timeout
-                break  # If successful, break the loop
-            except fal_client.RequestTimeoutError:
-                time.sleep(0.5)  # Wait a bit before trying again
-            except Exception as e:
-                status_placeholder.error(f"An error occurred: {str(e)}")
-                raise e
-        
+        # Calculate total time
         total_time = time.time() - start_time
         status_placeholder.success(f"Image generated successfully! (Total time: {total_time:.2f} seconds)")
+        
         return result
 
     # Main area
@@ -101,7 +96,7 @@ if api_key:
         num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
         safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
 
-    # Generate button
+        # Generate button
     if st.button("Generate Image"):
         if api_key and prompt:
             try:
