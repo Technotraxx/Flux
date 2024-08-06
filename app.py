@@ -56,20 +56,32 @@ if api_key:
 
     @st.cache_data
     def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
-        handler = fal_client.submit(
-            "fal-ai/flux-pro",
-            {
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "image_size": image_size,
-                "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale,
-                "num_images": num_images,
-                "safety_tolerance": safety_tolerance
-            }
-        )
-        result = handler.get()
-        return result
+    start_time = time.time()
+    handler = fal_client.submit(
+        "fal-ai/flux-pro",
+        {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "image_size": image_size,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance
+        }
+    )
+    
+    # Create a placeholder for the status message
+    status_placeholder = st.empty()
+    
+    while not handler.is_finished():
+        elapsed_time = time.time() - start_time
+        status_placeholder.info(f"Generating image... (Elapsed time: {elapsed_time:.2f} seconds)")
+        time.sleep(0.5)
+    
+    result = handler.get()
+    total_time = time.time() - start_time
+    status_placeholder.success(f"Image generated successfully! (Total time: {total_time:.2f} seconds)")
+    return result
 
     # Main area
     prompt = st.text_area("Enter your prompt:", help="Describe the image you want to generate")
@@ -85,41 +97,35 @@ if api_key:
 
     # Generate button
     if st.button("Generate Image"):
-        if api_key and prompt:
-            with st.spinner("Generating image..."):
-                progress_bar = st.progress(0)
-                for i in range(100):
-                    time.sleep(0.1)  # Simulate long-running operation
-                    progress_bar.progress(i + 1)
-                try:
-                    result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
-                    st.success("Image generated successfully!")
-                    for idx, image_info in enumerate(result['images']):
-                        image_url = image_info['url']
-                        response = requests.get(image_url)
-                        img = Image.open(BytesIO(response.content))
-                        st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
-                        
-                        # Add to history
-                        st.session_state.history.append({
-                            'prompt': prompt,
-                            'image': img
-                        })
+    if api_key and prompt:
+        try:
+            result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
+            for idx, image_info in enumerate(result['images']):
+                image_url = image_info['url']
+                response = requests.get(image_url)
+                img = Image.open(BytesIO(response.content))
+                st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
+                
+                # Add to history
+                st.session_state.history.append({
+                    'prompt': prompt,
+                    'image': img
+                })
 
-                        # Download button
-                        img_byte_arr = BytesIO()
-                        img.save(img_byte_arr, format='JPEG')
-                        img_byte_arr = img_byte_arr.getvalue()
-                        st.download_button(
-                            label=f"Download Image {idx+1}",
-                            data=img_byte_arr,
-                            file_name=f"generated_image_{idx+1}.jpg",
-                            mime="image/jpeg"
-                        )
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-        else:
-            st.error("Please enter your API key and a prompt.")
+                # Download button
+                img_byte_arr = BytesIO()
+                img.save(img_byte_arr, format='JPEG')
+                img_byte_arr = img_byte_arr.getvalue()
+                st.download_button(
+                    label=f"Download Image {idx+1}",
+                    data=img_byte_arr,
+                    file_name=f"generated_image_{idx+1}.jpg",
+                    mime="image/jpeg"
+                )
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+    else:
+        st.error("Please enter your API key and a prompt.")
 
     # History
     if st.session_state.history:
