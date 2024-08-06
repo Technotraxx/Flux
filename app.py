@@ -65,7 +65,7 @@ if api_key:
 
         # Submit the request
         handler = fal_client.submit(
-            "fal-ai/flux-pro",
+            "fal-ai/flux/dev",
             {
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
@@ -73,7 +73,8 @@ if api_key:
                 "num_inference_steps": num_inference_steps,
                 "guidance_scale": guidance_scale,
                 "num_images": num_images,
-                "safety_tolerance": safety_tolerance
+                "safety_tolerance": safety_tolerance,
+                "enable_safety_checker": true
             }
         )
         
