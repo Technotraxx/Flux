@@ -72,12 +72,19 @@ if api_key:
         # Create a placeholder for the status message
         status_placeholder = st.empty()
         
-        while not handler.is_finished():
+        while True:
             elapsed_time = time.time() - start_time
             status_placeholder.info(f"Generating image... (Elapsed time: {elapsed_time:.2f} seconds)")
-            time.sleep(0.5)
+            
+            try:
+                result = handler.get(timeout=0.1)  # Try to get the result with a short timeout
+                break  # If successful, break the loop
+            except fal_client.RequestTimeoutError:
+                time.sleep(0.5)  # Wait a bit before trying again
+            except Exception as e:
+                status_placeholder.error(f"An error occurred: {str(e)}")
+                raise e
         
-        result = handler.get()
         total_time = time.time() - start_time
         status_placeholder.success(f"Image generated successfully! (Total time: {total_time:.2f} seconds)")
         return result
