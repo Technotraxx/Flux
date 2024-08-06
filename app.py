@@ -8,6 +8,24 @@ from io import BytesIO
 def set_api_key(api_key):
     os.environ['FAL_KEY'] = api_key
 
+# Function to generate image using the API
+def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
+    import fal_client
+    handler = fal_client.submit(
+        "fal-ai/flux-pro",
+        arguments={
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "image_size": image_size,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance
+        },
+    )
+    result = handler.get()
+    return result
+
 # Streamlit UI
 st.title("Image Generation with FAL API")
 
@@ -17,24 +35,10 @@ api_key = st.text_input("Enter your FAL API Key:", type="password")
 # Set the API key
 if api_key:
     set_api_key(api_key)
-    import fal_client  # Importing fal_client after setting the API key
-
-    # Function to generate image using the API
-    def generate_image(prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
-        handler = fal_client.submit(
-            model="fal-ai/flux-pro",
-            prompt=prompt,
-            image_size=image_size,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            num_images=num_images,
-            safety_tolerance=safety_tolerance
-        )
-        result = handler.get()
-        return result
 
     # Prompt input
     prompt = st.text_area("Enter your prompt:")
+    negative_prompt = st.text_area("Enter your negative prompt:", value="worst quality, low quality, bad quality, deformed hands, deformed limbs, ugly, eye bags, small eyes, wrinkles, dark skin, logo, watermark, text, red color cast, tongue")
 
     # Image generation parameters
     image_size = st.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
@@ -47,7 +51,7 @@ if api_key:
     if st.button("Generate Image"):
         if api_key and prompt:
             with st.spinner("Generating image..."):
-                result = generate_image(prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
+                result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
                 st.success("Image generated successfully!")
                 image_url = result['images'][0]['url']
                 response = requests.get(image_url)
