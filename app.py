@@ -11,8 +11,11 @@ def set_api_key(api_key):
 # Streamlit UI
 st.title("Image Generation with FAL API")
 
-# API key input
-api_key = st.text_input("Enter your FAL API Key:", type="password")
+# Sidebar for parameter control
+st.sidebar.title("Generation Parameters")
+
+# API key input in sidebar
+api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 
 # Set the API key
 if api_key:
@@ -36,16 +39,16 @@ if api_key:
         result = handler.get()
         return result
 
-    # Prompt input
+    # Prompt input in main area
     prompt = st.text_area("Enter your prompt:")
-    negative_prompt = st.text_area("Enter your negative prompt:", value="worst quality, low quality, bad quality, deformed hands, deformed limbs, ugly, eye bags, small eyes, wrinkles, dark skin, logo, watermark, text, red color cast, tongue")
-
-    # Image generation parameters
-    image_size = st.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
-    num_inference_steps = st.number_input("Number of inference steps:", min_value=1, max_value=100, value=40)
-    guidance_scale = st.number_input("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0)
-    num_images = st.number_input("Number of images to generate:", min_value=1, max_value=10, value=1)
-    safety_tolerance = st.selectbox("Safety tolerance level:", ["1", "2", "3", "4", "5", "6"])
+    
+    # Parameters in sidebar
+    negative_prompt = st.sidebar.text_area("Enter your negative prompt:", value="worst quality, low quality, bad quality, deformed hands, deformed limbs, ugly, eye bags, small eyes, wrinkles, dark skin, logo, watermark, text, red color cast, tongue")
+    image_size = st.sidebar.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
+    num_inference_steps = st.sidebar.slider("Number of inference steps:", min_value=1, max_value=100, value=40, step=1)
+    guidance_scale = st.sidebar.slider("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0, step=0.5)
+    num_images = st.sidebar.number_input("Number of images to generate:", min_value=1, max_value=10, value=1)
+    safety_tolerance = st.sidebar.selectbox("Safety tolerance level:", ["1", "2", "3", "4", "5", "6"], index=5)  # Default to "6"
 
     # Generate button
     if st.button("Generate Image"):
@@ -71,4 +74,4 @@ if api_key:
         else:
             st.error("Please enter your API key and a prompt.")
 else:
-    st.error("Please enter your API key.")
+    st.sidebar.error("Please enter your API key.")
