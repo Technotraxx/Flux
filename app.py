@@ -23,15 +23,13 @@ if api_key:
     def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
         handler = fal_client.submit(
             "fal-ai/flux-pro",
-            arguments={
-                "prompt": prompt,
-                "negative_prompt": negative_prompt,
-                "image_size": image_size,
-                "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale,
-                "num_images": num_images,
-                "safety_tolerance": safety_tolerance
-            },
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            image_size=image_size,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            num_images=num_images,
+            safety_tolerance=safety_tolerance
         )
         result = handler.get()
         return result
