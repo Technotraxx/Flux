@@ -22,15 +22,13 @@ if api_key:
     # Function to generate image using the API
     def generate_image(prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
         handler = fal_client.submit(
-            "fal-ai/flux-pro",
-            arguments={
-                "prompt": prompt,
-                "image_size": image_size,
-                "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale,
-                "num_images": num_images,
-                "safety_tolerance": safety_tolerance
-            },
+            model="fal-ai/flux-pro",
+            prompt=prompt,
+            image_size=image_size,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            num_images=num_images,
+            safety_tolerance=safety_tolerance
         )
         result = handler.get()
         return result
