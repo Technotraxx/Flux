@@ -148,8 +148,3 @@ if api_key:
                 st.error(f"An error occurred: {str(e)}")
         else:
             st.error("Please enter your API key and a prompt.")
-
-else:
-    st.sidebar.error("Please enter your API key.")
-else:
-    st.sidebar.error("Please enter your API key.")
