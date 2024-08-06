@@ -45,8 +45,8 @@ if api_key:
     # Parameters in sidebar
     negative_prompt = st.sidebar.text_area("Enter your negative prompt:", value="worst quality, low quality, bad quality, deformed hands, deformed limbs, ugly, eye bags, small eyes, wrinkles, dark skin, logo, watermark, text, red color cast, tongue")
     image_size = st.sidebar.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
-    num_inference_steps = st.sidebar.slider("Number of inference steps:", min_value=1, max_value=100, value=40, step=1)
-    guidance_scale = st.sidebar.slider("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0, step=0.5)
+    num_inference_steps = st.sidebar.slider("Number of inference steps:", min_value=1, max_value=50, value=40, step=1)
+    guidance_scale = st.sidebar.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5)
     num_images = st.sidebar.number_input("Number of images to generate:", min_value=1, max_value=10, value=1)
     safety_tolerance = st.sidebar.selectbox("Safety tolerance level:", ["1", "2", "3", "4", "5", "6"], index=5)  # Default to "6"
 
