@@ -8,24 +8,6 @@ from io import BytesIO
 def set_api_key(api_key):
     os.environ['FAL_KEY'] = api_key
 
-# Function to generate image using the API
-def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
-    import fal_client
-    handler = fal_client.submit(
-        "fal-ai/flux-pro",
-        arguments={
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "image_size": image_size,
-            "num_inference_steps": num_inference_steps,
-            "guidance_scale": guidance_scale,
-            "num_images": num_images,
-            "safety_tolerance": safety_tolerance
-        },
-    )
-    result = handler.get()
-    return result
-
 # Streamlit UI
 st.title("Image Generation with FAL API")
 
@@ -35,6 +17,24 @@ api_key = st.text_input("Enter your FAL API Key:", type="password")
 # Set the API key
 if api_key:
     set_api_key(api_key)
+    import fal_client  # Importing fal_client after setting the API key
+
+    # Function to generate image using the API
+    def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
+        handler = fal_client.submit(
+            "fal-ai/flux-pro",
+            arguments={
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "image_size": image_size,
+                "num_inference_steps": num_inference_steps,
+                "guidance_scale": guidance_scale,
+                "num_images": num_images,
+                "safety_tolerance": safety_tolerance
+            },
+        )
+        result = handler.get()
+        return result
 
     # Prompt input
     prompt = st.text_area("Enter your prompt:")
@@ -42,8 +42,8 @@ if api_key:
 
     # Image generation parameters
     image_size = st.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
-    num_inference_steps = st.number_input("Number of inference steps:", min_value=1, max_value=100, value=28)
-    guidance_scale = st.number_input("Guidance scale:", min_value=1.0, max_value=10.0, value=3.5)
+    num_inference_steps = st.number_input("Number of inference steps:", min_value=1, max_value=100, value=40)
+    guidance_scale = st.number_input("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0)
     num_images = st.number_input("Number of images to generate:", min_value=1, max_value=10, value=1)
     safety_tolerance = st.selectbox("Safety tolerance level:", ["1", "2", "3", "4", "5", "6"])
 
