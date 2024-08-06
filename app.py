@@ -172,13 +172,16 @@ if st.session_state.history:
         with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
             col1, col2 = st.columns([2, 3])
             with col1:
-                # Display historical images at 50% of their original size as well
+                # Display historical images at 50% of their original size
                 width = item['image'].width // 2
                 st.image(item['image'], caption="Generated Image", width=width)
             with col2:
                 st.write("**Prompt:**", item['prompt'])
-                st.write("**Seed:**", item['seed'])
-                st.write("**Generated at:**", item['generation_time'])
+                st.write("**Seed:**", item.get('seed', 'Unknown'))
+                if 'generation_time' in item:
+                    st.write("**Generated at:**", item['generation_time'])
+                else:
+                    st.write("**Generated at:** Not available")
                 if 'download' not in item:
                     # Create a download button for the image
                     img_byte_arr = BytesIO()
@@ -187,7 +190,7 @@ if st.session_state.history:
                 st.download_button(
                     label="Download Image",
                     data=item['download'],
-                    file_name=item['filename'],
+                    file_name=item.get('filename', f"generated_image_{i}.jpg"),
                     mime="image/jpeg"
                 )
 
