@@ -119,7 +119,9 @@ if api_key:
                     col1, col2 = st.columns([3, 1])
                     
                     with col1:
-                        st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
+                        # Display the image at 50% of its original size
+                        width = img.width // 2
+                        st.image(img, caption=f"Generated Image {idx+1}", width=width)
                     
                     with col2:
                         st.write(f"Image {idx+1} Info:")
@@ -163,32 +165,34 @@ if api_key:
 else:
     st.sidebar.error("Please enter your API key.")
 
-    # History display
-    if st.session_state.history:
-        st.header("Generation History")
-        for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
-            with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
-                col1, col2 = st.columns([2, 3])
-                with col1:
-                    st.image(item['image'], caption="Generated Image", use_column_width=True)
-                with col2:
-                    st.write("**Prompt:**", item['prompt'])
-                    st.write("**Seed:**", item['seed'])
-                    st.write("**Generated at:**", item['generation_time'])
-                    if 'download' not in item:
-                        # Create a download button for the image
-                        img_byte_arr = BytesIO()
-                        item['image'].save(img_byte_arr, format='JPEG')
-                        item['download'] = img_byte_arr.getvalue()
-                    st.download_button(
-                        label="Download Image",
-                        data=item['download'],
-                        file_name=item['filename'],
-                        mime="image/jpeg"
-                    )
-    
-    # Clear history button
-    if st.session_state.history:
-        if st.button("Clear History"):
-            st.session_state.history = []
-            st.experimental_rerun()
+# History display
+if st.session_state.history:
+    st.header("Generation History")
+    for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
+        with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
+            col1, col2 = st.columns([2, 3])
+            with col1:
+                # Display historical images at 50% of their original size as well
+                width = item['image'].width // 2
+                st.image(item['image'], caption="Generated Image", width=width)
+            with col2:
+                st.write("**Prompt:**", item['prompt'])
+                st.write("**Seed:**", item['seed'])
+                st.write("**Generated at:**", item['generation_time'])
+                if 'download' not in item:
+                    # Create a download button for the image
+                    img_byte_arr = BytesIO()
+                    item['image'].save(img_byte_arr, format='JPEG')
+                    item['download'] = img_byte_arr.getvalue()
+                st.download_button(
+                    label="Download Image",
+                    data=item['download'],
+                    file_name=item['filename'],
+                    mime="image/jpeg"
+                )
+
+# Clear history button
+if st.session_state.history:
+    if st.button("Clear History"):
+        st.session_state.history = []
+        st.experimental_rerun()
