@@ -56,16 +56,16 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-    def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
+    def generate_image(model, prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
         start_time = time.time()
         
         # Create a placeholder for the status message
         status_placeholder = st.empty()
-        status_placeholder.info("Generating image...")
+        status_placeholder.info(f"Generating image using {model}...")
 
         # Submit the request
         handler = fal_client.submit(
-            "fal-ai/flux/dev",
+            model,
             {
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
@@ -83,7 +83,7 @@ if api_key:
         
         # Calculate total time
         total_time = time.time() - start_time
-        status_placeholder.success(f"Image generated successfully! (Total time: {total_time:.2f} seconds)")
+        status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
         
         return result
 
@@ -92,19 +92,20 @@ if api_key:
     
     # Sidebar parameters
     with st.sidebar.expander("Advanced Settings", expanded=False):
-        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="NOT WORKING AT THE MOMENT! Describe what you don't want in the image")
+        model = st.selectbox("Choose AI Model:", ["fal-ai/flux-pro", "fal-ai/flux/dev"], help="Select the AI model for image generation")
+        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="Describe what you don't want in the image")
         image_size = st.selectbox("Image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], help="Choose the aspect ratio of the generated image")
-        num_inference_steps = st.slider("Inference steps:", min_value=1, max_value=50, value=40, step=1, help="More steps generally result in better quality but take longer")
-        guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
+        num_inference_steps = st.slider("Inference steps:", min_value=1, max_value=100, value=40, step=1, help="More steps generally result in better quality but take longer")
+        guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
         num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
         safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
         enable_safety_checker = st.checkbox("Enable safety checker", value=False, help="If unchecked, the safety checker will be disabled")
-        
-     # Generate button
+
+    # Generate button
     if st.button("Generate Image"):
         if api_key and prompt:
             try:
-                result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
+                result = generate_image(model, prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
                 
                 # Display seed information
                 seed = result.get('seed', 'unknown')
@@ -142,7 +143,8 @@ if api_key:
                         'seed': seed,
                         'filename': filename,
                         'generation_time': generation_time,
-                        'enable_safety_checker': enable_safety_checker
+                        'enable_safety_checker': enable_safety_checker,
+                        'model': model
                     })
 
                     # Download button
@@ -180,10 +182,12 @@ if st.session_state.history:
             with col2:
                 st.write("**Prompt:**", item['prompt'])
                 st.write("**Seed:**", item.get('seed', 'Unknown'))
+                st.write("**Model:**", item.get('model', 'Unknown'))
                 if 'generation_time' in item:
                     st.write("**Generated at:**", item['generation_time'])
                 else:
                     st.write("**Generated at:** Not available")
+                st.write("**Safety Checker:**", "Enabled" if item.get('enable_safety_checker', True) else "Disabled")
                 if 'download' not in item:
                     # Create a download button for the image
                     img_byte_arr = BytesIO()
