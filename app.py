@@ -74,7 +74,7 @@ if api_key:
                 "guidance_scale": guidance_scale,
                 "num_images": num_images,
                 "safety_tolerance": safety_tolerance,
-                "enable_safety_checker": false
+                "enable_safety_checker": enable_safety_checker
             }
         )
         
@@ -98,7 +98,7 @@ if api_key:
         guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
         num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
         safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
-
+        enable_safety_checker = false
         
     # Generate button
     if st.button("Generate Image"):
