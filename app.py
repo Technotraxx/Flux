@@ -91,7 +91,7 @@ if api_key:
     
     # Sidebar parameters
     with st.sidebar.expander("Advanced Settings", expanded=False):
-        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="Describe what you don't want in the image")
+        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="NOT WORKING AT THE MOMENT! Describe what you don't want in the image")
         image_size = st.selectbox("Image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], help="Choose the aspect ratio of the generated image")
         num_inference_steps = st.slider("Inference steps:", min_value=1, max_value=100, value=40, step=1, help="More steps generally result in better quality but take longer")
         guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=10.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
