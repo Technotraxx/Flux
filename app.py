@@ -148,3 +148,33 @@ if api_key:
                 st.error(f"An error occurred: {str(e)}")
         else:
             st.error("Please enter your API key and a prompt.")
+
+
+# History display
+if st.session_state.history:
+    st.header("Generation History")
+    for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
+        with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
+            col1, col2 = st.columns([2, 3])
+            with col1:
+                st.image(item['image'], caption="Generated Image", use_column_width=True)
+            with col2:
+                st.write("**Prompt:**", item['prompt'])
+                st.write("**Seed:**", item['seed'])
+                if 'download' not in item:
+                    # Create a download button for the image
+                    img_byte_arr = BytesIO()
+                    item['image'].save(img_byte_arr, format='JPEG')
+                    item['download'] = img_byte_arr.getvalue()
+                st.download_button(
+                    label="Download Image",
+                    data=item['download'],
+                    file_name=f"history_image_{len(st.session_state.history)-i}.jpg",
+                    mime="image/jpeg"
+                )
+
+# Clear history button
+if st.session_state.history:
+    if st.button("Clear History"):
+        st.session_state.history = []
+        st.experimental_rerun()
