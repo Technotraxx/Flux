@@ -4,6 +4,8 @@ import requests
 from PIL import Image
 from io import BytesIO
 import time
+import uuid
+from datetime import datetime
 
 # Set page config
 st.set_page_config(page_title="AI Image Generator", layout="wide", initial_sidebar_state="expanded")
@@ -96,15 +98,17 @@ if api_key:
         num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
         safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
 
-        # Generate button
+        
+    # Generate button
     if st.button("Generate Image"):
         if api_key and prompt:
             try:
                 result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
                 
                 # Display seed information
-                if 'seed' in result:
-                    st.info(f"Seed used for generation: {result['seed']}")
+                seed = result.get('seed', 'unknown')
+                if seed != 'unknown':
+                    st.info(f"Seed used for generation: {seed}")
                 
                 for idx, image_info in enumerate(result['images']):
                     image_url = image_info['url']
@@ -123,11 +127,18 @@ if api_key:
                         if 'has_nsfw_concepts' in result:
                             st.write(f"NSFW Content: {'Yes' if result['has_nsfw_concepts'][idx] else 'No'}")
                     
+                    # Generate filename
+                    generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
+                    filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
+                    
                     # Add to history
                     st.session_state.history.append({
                         'prompt': prompt,
                         'image': img,
-                        'seed': result.get('seed', 'Unknown')
+                        'seed': seed,
+                        'filename': filename,
+                        'generation_time': generation_time
                     })
 
                     # Download button
@@ -137,7 +148,7 @@ if api_key:
                     st.download_button(
                         label=f"Download Image {idx+1}",
                         data=img_byte_arr,
-                        file_name=f"generated_image_{idx+1}.jpg",
+                        file_name=filename,
                         mime="image/jpeg"
                     )
                 
@@ -149,32 +160,35 @@ if api_key:
         else:
             st.error("Please enter your API key and a prompt.")
 
+else:
+    st.sidebar.error("Please enter your API key.")
 
-# History display
-if st.session_state.history:
-    st.header("Generation History")
-    for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
-        with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
-            col1, col2 = st.columns([2, 3])
-            with col1:
-                st.image(item['image'], caption="Generated Image", use_column_width=True)
-            with col2:
-                st.write("**Prompt:**", item['prompt'])
-                st.write("**Seed:**", item['seed'])
-                if 'download' not in item:
-                    # Create a download button for the image
-                    img_byte_arr = BytesIO()
-                    item['image'].save(img_byte_arr, format='JPEG')
-                    item['download'] = img_byte_arr.getvalue()
-                st.download_button(
-                    label="Download Image",
-                    data=item['download'],
-                    file_name=f"history_image_{len(st.session_state.history)-i}.jpg",
-                    mime="image/jpeg"
-                )
-
-# Clear history button
-if st.session_state.history:
-    if st.button("Clear History"):
-        st.session_state.history = []
-        st.experimental_rerun()
+    # History display
+    if st.session_state.history:
+        st.header("Generation History")
+        for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
+            with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
+                col1, col2 = st.columns([2, 3])
+                with col1:
+                    st.image(item['image'], caption="Generated Image", use_column_width=True)
+                with col2:
+                    st.write("**Prompt:**", item['prompt'])
+                    st.write("**Seed:**", item['seed'])
+                    st.write("**Generated at:**", item['generation_time'])
+                    if 'download' not in item:
+                        # Create a download button for the image
+                        img_byte_arr = BytesIO()
+                        item['image'].save(img_byte_arr, format='JPEG')
+                        item['download'] = img_byte_arr.getvalue()
+                    st.download_button(
+                        label="Download Image",
+                        data=item['download'],
+                        file_name=item['filename'],
+                        mime="image/jpeg"
+                    )
+    
+    # Clear history button
+    if st.session_state.history:
+        if st.button("Clear History"):
+            st.session_state.history = []
+            st.experimental_rerun()
