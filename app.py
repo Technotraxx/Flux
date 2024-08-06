@@ -3,26 +3,58 @@ import os
 import requests
 from PIL import Image
 from io import BytesIO
+import time
+
+# Set page config
+st.set_page_config(page_title="AI Image Generator", layout="wide", initial_sidebar_state="expanded")
+
+# Custom CSS
+st.markdown("""
+<style>
+    .reportview-container {
+        background: #f0f2f6
+    }
+    .sidebar .sidebar-content {
+        background: #ffffff
+    }
+    .Widget>label {
+        color: #31333F;
+        font-weight: bold;
+    }
+    .stButton>button {
+        color: #ffffff;
+        background-color: #00A9FF;
+        border-radius: 5px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Function to set API key as environment variable
 def set_api_key(api_key):
     os.environ['FAL_KEY'] = api_key
 
-# Streamlit UI
-st.title("Image Generation with FAL API")
+# Custom header
+st.markdown("""
+    <h1 style='text-align: center; color: #31333F;'>AI Image Generator</h1>
+    <p style='text-align: center; color: #31333F;'>Create stunning images with AI</p>
+    <hr>
+""", unsafe_allow_html=True)
 
-# Sidebar for parameter control
+# Sidebar
 st.sidebar.title("Generation Parameters")
 
 # API key input in sidebar
 api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 
-# Set the API key
+# Initialize session state
+if 'history' not in st.session_state:
+    st.session_state.history = []
+
 if api_key:
     set_api_key(api_key)
-    import fal_client  # Importing fal_client after setting the API key
+    import fal_client
 
-    # Function to generate image using the API
+    @st.cache_data
     def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
         handler = fal_client.submit(
             "fal-ai/flux-pro",
@@ -39,39 +71,65 @@ if api_key:
         result = handler.get()
         return result
 
-    # Prompt input in main area
-    prompt = st.text_area("Enter your prompt:")
+    # Main area
+    prompt = st.text_area("Enter your prompt:", help="Describe the image you want to generate")
     
-    # Parameters in sidebar
-    negative_prompt = st.sidebar.text_area("Enter your negative prompt:", value="worst quality, low quality, bad quality, deformed hands, deformed limbs, ugly, eye bags, small eyes, wrinkles, dark skin, logo, watermark, text, red color cast, tongue")
-    image_size = st.sidebar.selectbox("Select image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"])
-    num_inference_steps = st.sidebar.slider("Number of inference steps:", min_value=1, max_value=50, value=40, step=1)
-    guidance_scale = st.sidebar.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5)
-    num_images = st.sidebar.number_input("Number of images to generate:", min_value=1, max_value=10, value=1)
-    safety_tolerance = st.sidebar.selectbox("Safety tolerance level:", ["1", "2", "3", "4", "5", "6"], index=5)  # Default to "6"
+    # Sidebar parameters
+    with st.sidebar.expander("Advanced Settings", expanded=False):
+        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="Describe what you don't want in the image")
+        image_size = st.selectbox("Image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], help="Choose the aspect ratio of the generated image")
+        num_inference_steps = st.slider("Inference steps:", min_value=1, max_value=50, value=40, step=1, help="More steps generally result in better quality but take longer")
+        guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
+        num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
+        safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
 
     # Generate button
     if st.button("Generate Image"):
         if api_key and prompt:
             with st.spinner("Generating image..."):
-                result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
-                st.success("Image generated successfully!")
-                image_url = result['images'][0]['url']
-                response = requests.get(image_url)
-                img = Image.open(BytesIO(response.content))
-                st.image(img, caption="Generated Image", use_column_width=True)
+                progress_bar = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.1)  # Simulate long-running operation
+                    progress_bar.progress(i + 1)
+                try:
+                    result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
+                    st.success("Image generated successfully!")
+                    for idx, image_info in enumerate(result['images']):
+                        image_url = image_info['url']
+                        response = requests.get(image_url)
+                        img = Image.open(BytesIO(response.content))
+                        st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
+                        
+                        # Add to history
+                        st.session_state.history.append({
+                            'prompt': prompt,
+                            'image': img
+                        })
 
-                # Download button
-                img_byte_arr = BytesIO()
-                img.save(img_byte_arr, format='JPEG')
-                img_byte_arr = img_byte_arr.getvalue()
-                st.download_button(
-                    label="Download Image",
-                    data=img_byte_arr,
-                    file_name="generated_image.jpg",
-                    mime="image/jpeg"
-                )
+                        # Download button
+                        img_byte_arr = BytesIO()
+                        img.save(img_byte_arr, format='JPEG')
+                        img_byte_arr = img_byte_arr.getvalue()
+                        st.download_button(
+                            label=f"Download Image {idx+1}",
+                            data=img_byte_arr,
+                            file_name=f"generated_image_{idx+1}.jpg",
+                            mime="image/jpeg"
+                        )
+                except Exception as e:
+                    st.error(f"An error occurred: {str(e)}")
         else:
             st.error("Please enter your API key and a prompt.")
+
+    # History
+    if st.session_state.history:
+        st.header("Generation History")
+        for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.image(item['image'], caption=f"Image {len(st.session_state.history)-i}", width=100)
+            with col2:
+                st.write(f"Prompt: {item['prompt']}")
+
 else:
     st.sidebar.error("Please enter your API key.")
