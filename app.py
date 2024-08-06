@@ -101,16 +101,33 @@ if api_key:
         if api_key and prompt:
             try:
                 result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
+                
+                # Display seed information
+                if 'seed' in result:
+                    st.info(f"Seed used for generation: {result['seed']}")
+                
                 for idx, image_info in enumerate(result['images']):
                     image_url = image_info['url']
                     response = requests.get(image_url)
                     img = Image.open(BytesIO(response.content))
-                    st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
+                    
+                    # Create columns for image and info
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.image(img, caption=f"Generated Image {idx+1}", use_column_width=True)
+                    
+                    with col2:
+                        st.write(f"Image {idx+1} Info:")
+                        st.write(f"Content Type: {image_info['content_type']}")
+                        if 'has_nsfw_concepts' in result:
+                            st.write(f"NSFW Content: {'Yes' if result['has_nsfw_concepts'][idx] else 'No'}")
                     
                     # Add to history
                     st.session_state.history.append({
                         'prompt': prompt,
-                        'image': img
+                        'image': img,
+                        'seed': result.get('seed', 'Unknown')
                     })
 
                     # Download button
@@ -123,10 +140,16 @@ if api_key:
                         file_name=f"generated_image_{idx+1}.jpg",
                         mime="image/jpeg"
                     )
+                
+                # Display the prompt used
+                st.write(f"Prompt used: {result.get('prompt', prompt)}")
+                
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
         else:
             st.error("Please enter your API key and a prompt.")
 
+else:
+    st.sidebar.error("Please enter your API key.")
 else:
     st.sidebar.error("Please enter your API key.")
