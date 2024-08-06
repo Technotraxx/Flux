@@ -56,7 +56,7 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-    def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance):
+    def generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
         start_time = time.time()
         
         # Create a placeholder for the status message
@@ -74,7 +74,7 @@ if api_key:
                 "guidance_scale": guidance_scale,
                 "num_images": num_images,
                 "safety_tolerance": safety_tolerance,
-                "enable_safety_checker": true
+                "enable_safety_checker": false
             }
         )
         
@@ -104,7 +104,7 @@ if api_key:
     if st.button("Generate Image"):
         if api_key and prompt:
             try:
-                result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance)
+                result = generate_image(prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
                 
                 # Display seed information
                 seed = result.get('seed', 'unknown')
