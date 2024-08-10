@@ -56,7 +56,7 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-    def generate_image(model, prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
+    def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
         start_time = time.time()
         
         # Create a placeholder for the status message
@@ -68,7 +68,6 @@ if api_key:
             model,
             {
                 "prompt": prompt,
-                "negative_prompt": negative_prompt,
                 "image_size": image_size,
                 "num_inference_steps": num_inference_steps,
                 "guidance_scale": guidance_scale,
@@ -93,7 +92,6 @@ if api_key:
     # Sidebar parameters
     with st.sidebar.expander("Advanced Settings", expanded=False):
         model = st.selectbox("Choose AI Model:", ["fal-ai/flux-pro", "fal-ai/flux/dev"], help="Select the AI model for image generation")
-        negative_prompt = st.text_area("Negative prompt:", value="worst quality, low quality, bad quality", help="Describe what you don't want in the image")
         image_size = st.selectbox("Image size:", ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"], help="Choose the aspect ratio of the generated image")
         num_inference_steps = st.slider("Inference steps:", min_value=1, max_value=50, value=40, step=1, help="More steps generally result in better quality but take longer")
         guidance_scale = st.slider("Guidance scale:", min_value=1.0, max_value=20.0, value=9.0, step=0.5, help="How closely the image should follow the prompt. Higher values stick closer to the prompt")
@@ -105,7 +103,7 @@ if api_key:
     if st.button("Generate Image"):
         if api_key and prompt:
             try:
-                result = generate_image(model, prompt, negative_prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
+                result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
                 
                 # Display seed information
                 seed = result.get('seed', 'unknown')
