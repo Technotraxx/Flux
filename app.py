@@ -60,7 +60,7 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-    def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed=None):
+def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed=None):
     start_time = time.time()
     
     # Create a placeholder for the status message
