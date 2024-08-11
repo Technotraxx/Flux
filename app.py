@@ -37,8 +37,8 @@ def set_api_key(api_key):
 
 # Custom header
 st.markdown("""
-    <h1 style='text-align: center; color: #31333F;'>AI Image Generator</h1>
-    <p style='text-align: center; color: #31333F;'>Create stunning images with AI</p>
+    <h1 style='text-align: center; color: #31333F;'>FLUX AI Image Generator</h1>
+    <p style='text-align: center; color: #31333F;'>Create stunning images with the FLUX Model Series by Black Forest Labs</p>
     <hr>
 """, unsafe_allow_html=True)
 
@@ -51,6 +51,10 @@ api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 # Initialize session state
 if 'history' not in st.session_state:
     st.session_state.history = []
+
+# Initialize session state for current generation
+if 'current_generation' not in st.session_state:
+    st.session_state.current_generation = []
 
 if api_key:
     set_api_key(api_key)
@@ -100,74 +104,79 @@ if api_key:
         enable_safety_checker = st.checkbox("Enable safety checker", value=False, help="If unchecked, the safety checker will be disabled")
 
     # Generate button
-    if st.button("Generate Image"):
-        if api_key and prompt:
-            try:
-                result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
-                
-                # Display seed information
-                seed = result.get('seed', 'unknown')
-                if seed != 'unknown':
-                    st.info(f"Seed used for generation: {seed}")
-                
-                for idx, image_info in enumerate(result['images']):
-                    image_url = image_info['url']
-                    response = requests.get(image_url)
-                    img = Image.open(BytesIO(response.content))
+if st.button("Generate Image"):
+    if api_key and prompt:
+        try:
+            result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
+            
+            # Display seed information
+            seed = result.get('seed', 'unknown')
+            if seed != 'unknown':
+                st.info(f"Seed used for generation: {seed}")
+            
+            # Clear previous generation
+            st.session_state.current_generation = []
+            
+            for idx, image_info in enumerate(result['images']):
+                image_url = image_info['url']
+                response = requests.get(image_url)
+                img = Image.open(BytesIO(response.content))
 
-                     # Generate filename
-                    generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
-                    filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
-                    
-                    # Create columns for image and info
-                    col1, col2, col3 = st.columns([3,1, 1])
-                    
-                    with col1:
-                        # Download button
-                        img_byte_arr = BytesIO()
-                        img.save(img_byte_arr, format='JPEG')
-                        img_byte_arr = img_byte_arr.getvalue()
-                        st.download_button(
-                            label=f"Download Image {idx+1}",
-                            data=img_byte_arr,
-                            file_name=filename,
-                            mime="image/jpeg"
-                        )
-                        
-                        # Display the image at 100% of its original size
-                        width = img.width // 1
-                        st.image(img, caption=f"Generated Image {idx+1}", width=width)
-
-                    with col2:
-                        # Display the prompt used
-                        st.write("**Prompt used:**")
-                        st.code(f"{result.get('prompt', prompt)}")
-                        
-                    with col3:
-                        st.write(f"Image {idx+1} Info:")
-                        st.write(f"Content Type: {image_info['content_type']}")
-                        if 'has_nsfw_concepts' in result:
-                            st.write(f"NSFW Content: {'Yes' if result['has_nsfw_concepts'][idx] else 'No'}")
-                                                                        
-                    # Add to history
-                    st.session_state.history.append({
-                        'prompt': prompt,
-                        'image': img,
-                        'seed': seed,
-                        'filename': filename,
-                        'generation_time': generation_time,
-                        'enable_safety_checker': enable_safety_checker,
-                        'model': model
-                    })
+                # Generate filename
+                generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
+                filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
                 
-            except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
-        else:
-            st.error("Please enter your API key and a prompt.")
+                # Store image and info in session state
+                st.session_state.current_generation.append({
+                    'image': img,
+                    'prompt': result.get('prompt', prompt),
+                    'content_type': image_info['content_type'],
+                    'has_nsfw_concepts': result.get('has_nsfw_concepts', [False])[idx],
+                    'filename': filename,
+                    'seed': seed,
+                    'generation_time': generation_time,
+                    'enable_safety_checker': enable_safety_checker,
+                    'model': model
+                })
+                
+                # Add to history
+                st.session_state.history.append(st.session_state.current_generation[-1])
+            
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+    else:
+        st.error("Please enter your API key and a prompt.")
 
-else:
-    st.sidebar.error("Please enter your API key.")
+# Display current generation
+if st.session_state.current_generation:
+    for idx, item in enumerate(st.session_state.current_generation):
+        col1, col2, col3 = st.columns([3, 1, 1])
+        
+        with col1:
+            # Download button
+            img_byte_arr = BytesIO()
+            item['image'].save(img_byte_arr, format='JPEG')
+            img_byte_arr = img_byte_arr.getvalue()
+            st.download_button(
+                label=f"Download Image {idx+1}",
+                data=img_byte_arr,
+                file_name=item['filename'],
+                mime="image/jpeg"
+            )
+            
+            # Display the image at 100% of its original size
+            st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
+
+        with col2:
+            # Display the prompt used
+            st.write("**Prompt used:**")
+            st.code(item['prompt'])
+            
+        with col3:
+            st.write(f"Image {idx+1} Info:")
+            st.write(f"Content Type: {item['content_type']}")
+            st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
 
 # History display
 if st.session_state.history:
