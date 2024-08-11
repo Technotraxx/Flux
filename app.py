@@ -163,7 +163,7 @@ if st.button("Generate Image"):
 # Display current generation
 if st.session_state.current_generation:
     for idx, item in enumerate(st.session_state.current_generation):
-        col1, col2, col3 = st.columns([3, 1, 1])
+        col1, col2, col3 = st.columns([6, 1, 3])
         
         with col1:
             # Download button
