@@ -156,9 +156,9 @@ if api_key:
                         mime="image/jpeg"
                     )
                 
-                # Display the prompt used
-            st.write("Prompt used:")
-            st.code(f"{result.get('prompt', prompt)}")
+                    # Display the prompt used
+                st.write("Prompt used:")
+                st.code(f"{result.get('prompt', prompt)}")
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
