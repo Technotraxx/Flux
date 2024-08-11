@@ -119,8 +119,8 @@ if api_key:
                     col1, col2 = st.columns([3, 1])
                     
                     with col1:
-                        # Display the image at 50% of its original size
-                        width = img.width // 2
+                        # Display the image at 100% of its original size
+                        width = img.width // 1
                         st.image(img, caption=f"Generated Image {idx+1}", width=width)
                     
                     with col2:
@@ -170,7 +170,7 @@ else:
 # History display
 if st.session_state.history:
     st.header("Generation History")
-    for i, item in enumerate(reversed(st.session_state.history[-5:])):  # Show last 5 items
+    for i, item in enumerate(reversed(st.session_state.history[-8:])):  # Show last 5 items
         with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
             col1, col2 = st.columns([2, 3])
             with col1:
