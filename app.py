@@ -181,11 +181,13 @@ if st.session_state.current_generation:
             st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
 
         with col2:
+            t.write(" ")
+            
+        with col3:
             # Display the prompt used
             st.write("**Prompt used:**")
             st.code(item['prompt'])
-            
-        with col3:
+            st.write(" ")
             st.write(f"Image {idx+1} Info:")
             st.write(f"Content Type: {item['content_type']}")
             st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
