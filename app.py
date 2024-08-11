@@ -181,7 +181,7 @@ if st.session_state.current_generation:
             st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
 
         with col2:
-            t.write(" ")
+            st.write(" ")
             
         with col3:
             # Display the prompt used
