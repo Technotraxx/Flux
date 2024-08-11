@@ -183,14 +183,14 @@ if st.session_state.current_generation:
             st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
 
         with col2:
-           st.html("<p>")
+           st.markdown("<p>", unsafe_allow_html=True)
             
         with col3:
              # Display the prompt used
             st.subheader("**Prompt used:**")
             st.code(item['prompt'])
             st.write(f"**Seed:** {item['seed']}")
-            st.html("<p>")
+            st.divider()
              # Display additional info
             st.subheader(f"**Image {idx+1} Info:**")
             st.write(f"Content Type: {item['content_type']}")
