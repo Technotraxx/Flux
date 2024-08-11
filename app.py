@@ -60,35 +60,39 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-    def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker):
-        start_time = time.time()
-        
-        # Create a placeholder for the status message
-        status_placeholder = st.empty()
-        status_placeholder.info(f"Generating image using {model}...")
+    def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed=None):
+    start_time = time.time()
+    
+    # Create a placeholder for the status message
+    status_placeholder = st.empty()
+    status_placeholder.info(f"Generating image using {model}...")
 
-        # Submit the request
-        handler = fal_client.submit(
-            model,
-            {
-                "prompt": prompt,
-                "image_size": image_size,
-                "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale,
-                "num_images": num_images,
-                "safety_tolerance": safety_tolerance,
-                "enable_safety_checker": enable_safety_checker
-            }
-        )
-        
-        # Wait for the result
-        result = handler.get()
-        
-        # Calculate total time
-        total_time = time.time() - start_time
-        status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
-        
-        return result
+    # Prepare the request payload
+    payload = {
+        "prompt": prompt,
+        "image_size": image_size,
+        "num_inference_steps": num_inference_steps,
+        "guidance_scale": guidance_scale,
+        "num_images": num_images,
+        "safety_tolerance": safety_tolerance,
+        "enable_safety_checker": enable_safety_checker
+    }
+
+    # Add seed to payload if provided
+    if seed:
+        payload["seed"] = int(seed)
+
+    # Submit the request
+    handler = fal_client.submit(model, payload)
+    
+    # Wait for the result
+    result = handler.get()
+    
+    # Calculate total time
+    total_time = time.time() - start_time
+    status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
+    
+    return result
 
     # Main area
     prompt = st.text_area("Enter your prompt:", help="Describe the image you want to generate")
@@ -102,17 +106,24 @@ if api_key:
         num_images = st.number_input("Number of images:", min_value=1, max_value=10, value=1, help="Number of images to generate in one go")
         safety_tolerance = st.selectbox("Safety tolerance:", ["1", "2", "3", "4", "5", "6"], index=5, help="6 is the most permissive, 1 is the most restrictive")
         enable_safety_checker = st.checkbox("Enable safety checker", value=False, help="If unchecked, the safety checker will be disabled")
+    
+        # New seed input field
+        seed = st.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
+
 
     # Generate button
 if st.button("Generate Image"):
     if api_key and prompt:
         try:
-            result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker)
+            # Convert seed to integer if provided, otherwise pass None
+            seed_value = int(seed) if seed and seed.isdigit() else None
+            
+            result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed_value)
             
             # Display seed information
-            seed = result.get('seed', 'unknown')
-            if seed != 'unknown':
-                st.info(f"Seed used for generation: {seed}")
+            used_seed = result.get('seed', 'unknown')
+            if used_seed != 'unknown':
+                st.info(f"Seed used for generation: {used_seed}")
             
             # Clear previous generation
             st.session_state.current_generation = []
