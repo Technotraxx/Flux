@@ -157,7 +157,8 @@ if api_key:
                     )
                 
                 # Display the prompt used
-                st.write(f"Prompt used: {result.get('prompt', prompt)}")
+            st.write("Prompt used:")
+            st.code(f"{result.get('prompt', prompt)}")
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
