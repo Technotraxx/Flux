@@ -116,18 +116,33 @@ if api_key:
                     img = Image.open(BytesIO(response.content))
                     
                     # Create columns for image and info
-                    col1, col2 = st.columns([3, 1])
+                    col1, col2, col3 = st.columns([3,1, 1])
                     
                     with col1:
                         # Display the image at 100% of its original size
                         width = img.width // 1
                         st.image(img, caption=f"Generated Image {idx+1}", width=width)
-                    
+
                     with col2:
+                         # Download button
+                        img_byte_arr = BytesIO()
+                        img.save(img_byte_arr, format='JPEG')
+                        img_byte_arr = img_byte_arr.getvalue()
+                        st.download_button(
+                            label=f"Download Image {idx+1}",
+                            data=img_byte_arr,
+                            file_name=filename,
+                            mime="image/jpeg"
+                        )
+                        
+                    with col3:
                         st.write(f"Image {idx+1} Info:")
                         st.write(f"Content Type: {image_info['content_type']}")
                         if 'has_nsfw_concepts' in result:
                             st.write(f"NSFW Content: {'Yes' if result['has_nsfw_concepts'][idx] else 'No'}")
+                         # Display the prompt used
+                        st.write("Prompt used:")
+                        st.code(f"{result.get('prompt', prompt)}")
                     
                     # Generate filename
                     generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -144,21 +159,6 @@ if api_key:
                         'enable_safety_checker': enable_safety_checker,
                         'model': model
                     })
-
-                    # Download button
-                    img_byte_arr = BytesIO()
-                    img.save(img_byte_arr, format='JPEG')
-                    img_byte_arr = img_byte_arr.getvalue()
-                    st.download_button(
-                        label=f"Download Image {idx+1}",
-                        data=img_byte_arr,
-                        file_name=filename,
-                        mime="image/jpeg"
-                    )
-                
-                    # Display the prompt used
-                st.write("Prompt used:")
-                st.code(f"{result.get('prompt', prompt)}")
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
