@@ -60,39 +60,40 @@ if api_key:
     set_api_key(api_key)
     import fal_client
 
-def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed=None):
-    start_time = time.time()
+    # Update the generate_image function to include the seed parameter
+    def generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed=None):
+        start_time = time.time()
+        
+        # Create a placeholder for the status message
+        status_placeholder = st.empty()
+        status_placeholder.info(f"Generating image using {model}...")
     
-    # Create a placeholder for the status message
-    status_placeholder = st.empty()
-    status_placeholder.info(f"Generating image using {model}...")
-
-    # Prepare the request payload
-    payload = {
-        "prompt": prompt,
-        "image_size": image_size,
-        "num_inference_steps": num_inference_steps,
-        "guidance_scale": guidance_scale,
-        "num_images": num_images,
-        "safety_tolerance": safety_tolerance,
-        "enable_safety_checker": enable_safety_checker
-    }
-
-    # Add seed to payload if provided
-    if seed:
-        payload["seed"] = int(seed)
-
-    # Submit the request
-    handler = fal_client.submit(model, payload)
+        # Prepare the request payload
+        payload = {
+            "prompt": prompt,
+            "image_size": image_size,
+            "num_inference_steps": num_inference_steps,
+            "guidance_scale": guidance_scale,
+            "num_images": num_images,
+            "safety_tolerance": safety_tolerance,
+            "enable_safety_checker": enable_safety_checker
+        }
     
-    # Wait for the result
-    result = handler.get()
+        # Add seed to payload if provided
+        if seed:
+            payload["seed"] = int(seed)
     
-    # Calculate total time
-    total_time = time.time() - start_time
-    status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
-    
-    return result
+        # Submit the request
+        handler = fal_client.submit(model, payload)
+        
+        # Wait for the result
+        result = handler.get()
+        
+        # Calculate total time
+        total_time = time.time() - start_time
+        status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
+        
+        return result
 
     # Main area
     prompt = st.text_area("Enter your prompt:", help="Describe the image you want to generate")
