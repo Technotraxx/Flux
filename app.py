@@ -122,9 +122,11 @@ if st.button("Generate Image"):
             result = generate_image(model, prompt, image_size, num_inference_steps, guidance_scale, num_images, safety_tolerance, enable_safety_checker, seed_value)
             
             # Display seed information
-            used_seed = result.get('seed', 'unknown')
-            if used_seed != 'unknown':
+            used_seed = result.get('seed')
+            if used_seed is not None:
                 st.info(f"Seed used for generation: {used_seed}")
+            else:
+                st.info("No seed information available from the API.")
             
             # Clear previous generation
             st.session_state.current_generation = []
@@ -137,7 +139,7 @@ if st.button("Generate Image"):
                 # Generate filename
                 generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                 unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
-                filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
+                filename = f"image_{used_seed}_{generation_time}_{unique_id}.jpg"
                 
                 # Store image and info in session state
                 st.session_state.current_generation.append({
@@ -146,7 +148,7 @@ if st.button("Generate Image"):
                     'content_type': image_info['content_type'],
                     'has_nsfw_concepts': result.get('has_nsfw_concepts', [False])[idx],
                     'filename': filename,
-                    'seed': seed,
+                    'seed': used_seed,
                     'generation_time': generation_time,
                     'enable_safety_checker': enable_safety_checker,
                     'model': model
@@ -181,21 +183,23 @@ if st.session_state.current_generation:
             st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
 
         with col2:
-            st.write(" ")
+           st.html("<p>")
             
         with col3:
-            # Display the prompt used
-            st.write("**Prompt used:**")
+             # Display the prompt used
+            st.subheader("**Prompt used:**")
             st.code(item['prompt'])
-            st.write(" ")
-            st.write(f"Image {idx+1} Info:")
+            st.write(f"**Seed:** {item['seed']}")
+            st.html("<p>")
+             # Display additional info
+            st.subheader(f"**Image {idx+1} Info:**")
             st.write(f"Content Type: {item['content_type']}")
             st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
 
 # History display
 if st.session_state.history:
     st.header("Generation History")
-    for i, item in enumerate(reversed(st.session_state.history[-8:])):  # Show last 5 items
+    for i, item in enumerate(reversed(st.session_state.history[-8:])):  # Show last 8 items
         with st.expander(f"Generation {len(st.session_state.history)-i}: {item['prompt'][:50]}..."):
             col1, col2 = st.columns([2, 3])
             with col1:
