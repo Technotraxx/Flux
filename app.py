@@ -114,6 +114,11 @@ if api_key:
                     image_url = image_info['url']
                     response = requests.get(image_url)
                     img = Image.open(BytesIO(response.content))
+
+                     # Generate filename
+                    generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
+                    filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
                     
                     # Create columns for image and info
                     col1, col2, col3 = st.columns([3,1, 1])
@@ -143,12 +148,7 @@ if api_key:
                          # Display the prompt used
                         st.write("Prompt used:")
                         st.code(f"{result.get('prompt', prompt)}")
-                    
-                    # Generate filename
-                    generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
-                    filename = f"image_{seed}_{generation_time}_{unique_id}.jpg"
-                    
+                                                      
                     # Add to history
                     st.session_state.history.append({
                         'prompt': prompt,
