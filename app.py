@@ -189,10 +189,10 @@ if st.session_state.current_generation:
              # Display the prompt used
             st.subheader("**Prompt used:**")
             st.code(item['prompt'])
-            st.write(f"**Seed:** {item['seed']}")
             st.divider()
              # Display additional info
             st.subheader(f"**Image {idx+1} Info:**")
+            st.write(f"**Seed:** {item['seed']}")
             st.write(f"Content Type: {item['content_type']}")
             st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
 
