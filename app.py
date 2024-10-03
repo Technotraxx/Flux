@@ -160,10 +160,10 @@ if api_key:
 
     # Conditional inputs based on generation mode
     if generation_mode == "Image-to-Image":
-        # Arrange image upload, preview, size info, and strength slider in columns
-        col1, col2 = st.columns(2)
+        # Arrange upload, image size, strength slider in left column and preview in right column
+        left_col, right_col = st.columns([1, 1.5])  # Adjust column widths as needed
 
-        with col1:
+        with left_col:
             # Image upload
             uploaded_image = st.file_uploader("Upload an image for modification:", type=["png", "jpg", "jpeg"])
             if uploaded_image:
@@ -201,12 +201,10 @@ if api_key:
                     image_data_uri = None
                     image_size_info = None
 
-        with col2:
-            # Display uploaded image with reduced size
-            if image:
-                st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
+            # Display Image Size Info
+            if image_size_info:
                 st.write(f"**Image Size:** {image_size_info}")
-            
+
             # Strength slider for Image-to-Image
             strength = st.slider(
                 "Strength:",
@@ -216,6 +214,12 @@ if api_key:
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
+
+        with right_col:
+            # Display uploaded image with reduced size
+            if image:
+                st.image(image, caption="Uploaded Image Preview", width=300)  # Adjust width as needed
+
     else:
         image = None
         image_data_uri = None
