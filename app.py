@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 import base64
 
-# Set page config
+# Set page configuration
 st.set_page_config(
     page_title="FLUX AI Image Generator",
     layout="wide",
@@ -47,18 +47,23 @@ st.markdown("""
     <hr>
 """, unsafe_allow_html=True)
 
-# Sidebar for generation parameters
+# Sidebar: Generation Parameters
 st.sidebar.title("Generation Parameters")
 
 # API key input in sidebar
 api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 
-# Initialize session state for history and current generation
+# Initialize session state for history, current generation, and uploaded image
 if 'history' not in st.session_state:
     st.session_state.history = []
 
 if 'current_generation' not in st.session_state:
     st.session_state.current_generation = []
+
+if 'uploaded_image' not in st.session_state:
+    st.session_state.uploaded_image = None
+    st.session_state.image_data_uri = None
+    st.session_state.image_size_info = None
 
 # Import fal_client only if API key is provided
 if api_key:
@@ -106,7 +111,7 @@ if api_key:
             payload["safety_tolerance"] = safety_tolerance
     
         # Add seed to payload if provided
-        if seed is not None:
+        if seed:
             payload["seed"] = int(seed)
         
         # Add image_base64 and strength if provided (for Image-to-Image)
@@ -136,8 +141,7 @@ if api_key:
         
         return result
 
-    # Main area
-    # Mode selection: Text-to-Image or Image-to-Image
+    # Main Area: Generation Modes
     generation_mode = st.radio(
         "Select Generation Mode:",
         ("Text-to-Image", "Image-to-Image"),
@@ -163,14 +167,35 @@ if api_key:
                 image_base64 = base64.b64encode(img_bytes).decode('utf-8')
                 image_data_uri = f"data:image/jpeg;base64,{image_base64}"
                 
-                # Display uploaded image size
-                st.write(f"**Uploaded Image Size:** {image.width} x {image.height} pixels")
+                # Get image size
+                width, height = image.size
+                image_size_info = f"Width: {width}px, Height: {height}px"
+                
+                # Store in session state
+                st.session_state.uploaded_image = image
+                st.session_state.image_data_uri = image_data_uri
+                st.session_state.image_size_info = image_size_info
             except Exception as e:
                 st.error(f"Error processing the uploaded image: {e}")
-                image_data_uri = None
+                st.session_state.uploaded_image = None
+                st.session_state.image_data_uri = None
+                st.session_state.image_size_info = None
         else:
-            image_data_uri = None
+            # If no new image is uploaded, use the existing one from session_state
+            if st.session_state.uploaded_image:
+                image = st.session_state.uploaded_image
+                image_data_uri = st.session_state.image_data_uri
+                image_size_info = st.session_state.image_size_info
+            else:
+                image = None
+                image_data_uri = None
+                image_size_info = None
 
+        # Display uploaded image size
+        if image:
+            st.image(image, caption="Uploaded Image", use_column_width=True)
+            st.write(f"**Image Size:** {image_size_info}")
+        
         # LoRA path input
         lora_path_input = st.text_input(
             "Enter LoRA Path:",
@@ -197,16 +222,20 @@ if api_key:
             help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
         )
     else:
+        image = None
         image_data_uri = None
+        image_size_info = None
         strength = None
         lora_path_input = None
         lora_scale_input = None
 
-    # Sidebar parameters
+    # Sidebar: Advanced Settings
     with st.sidebar.expander("Advanced Settings", expanded=False):
         if generation_mode == "Text-to-Image":
+            # List of public models, including the new model pro1.1
             model_options = [
-                "fal-ai/flux-pro/v1.1",
+                "fal-ai/flux-pro/v1.1",  # New Model Integrated
+                "fal-ai/flux-pro",
                 "fal-ai/flux/dev",
                 "fal-ai/flux-realism"
             ]
@@ -220,34 +249,21 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
-        # Image size selection
+        # Image size selection with Custom Size option only for Image-to-Image
         if generation_mode == "Image-to-Image":
-            image_size_option = st.selectbox(
-                "Image size:",
-                ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "Custom Size"],
-                help="Choose the aspect ratio of the generated image"
+            # Allow users to choose predefined sizes or use the uploaded image's size
+            size_option = st.selectbox(
+                "Image Size Option:",
+                ["Use Uploaded Image Size", "Select Predefined Size"],
+                help="Choose whether to use the uploaded image's size or select from predefined sizes."
             )
             
-            if image_size_option == "Custom Size":
-                custom_width = st.number_input(
-                    "Enter image width (pixels):",
-                    min_value=1,
-                    max_value=4096,
-                    value=512,
-                    step=1,
-                    help="Specify the width of the generated image in pixels."
-                )
-                custom_height = st.number_input(
-                    "Enter image height (pixels):",
-                    min_value=1,
-                    max_value=4096,
-                    value=512,
-                    step=1,
-                    help="Specify the height of the generated image in pixels."
-                )
-                # Assuming the API can accept custom sizes as separate width and height
-                # If the API requires a different format, adjust accordingly
-                image_size = {"width": custom_width, "height": custom_height}
+            if size_option == "Use Uploaded Image Size":
+                if image:
+                    image_size = {"width": image.width, "height": image.height}
+                else:
+                    st.warning("Please upload an image to use its size.")
+                    image_size = {"width": 512, "height": 512}  # Default fallback
             else:
                 # Predefined image sizes mapping
                 predefined_sizes = {
@@ -258,14 +274,21 @@ if api_key:
                     "landscape_4_3": {"width": 600, "height": 800},
                     "landscape_16_9": {"width": 720, "height": 1280}
                 }
+                image_size_option = st.selectbox(
+                    "Select Image Size:",
+                    list(predefined_sizes.keys()),
+                    help="Choose the aspect ratio of the generated image"
+                )
                 image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
         else:
-            # In Text-to-Image mode, do not offer custom size
+            # Image size selection without Custom Size
             image_size_option = st.selectbox(
                 "Image size:",
                 ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
                 help="Choose the aspect ratio of the generated image"
             )
+            
+            # Predefined image sizes mapping
             predefined_sizes = {
                 "square_hd": {"width": 1080, "height": 1080},
                 "square": {"width": 512, "height": 512},
@@ -277,48 +300,51 @@ if api_key:
             image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
 
         num_inference_steps = st.slider(
-            "Inference steps:",
+            "Inference Steps:",
             min_value=1,
             max_value=50,
             value=32,
             step=1,
-            help="More steps generally result in better quality but take longer"
+            help="More steps generally result in better quality but take longer."
         )
         guidance_scale = st.slider(
-            "Guidance scale:",
+            "Guidance Scale:",
             min_value=1.0,
             max_value=20.0,
             value=1.5,
             step=0.1,
-            help="How closely the image should follow the prompt. Higher values stick closer to the prompt"
+            help="How closely the image should follow the prompt. Higher values stick closer to the prompt."
         )
         num_images = st.number_input(
-            "Number of images:",
+            "Number of Images:",
             min_value=1,
             max_value=10,
             value=2,
-            help="Number of images to generate in one go"
+            help="Number of images to generate in one go."
         )
         
         # Safety tolerance only for Text-to-Image
         if generation_mode == "Text-to-Image":
             safety_tolerance = st.selectbox(
-                "Safety tolerance:",
+                "Safety Tolerance:",
                 ["1", "2", "3", "4", "5", "6"],
                 index=5,
-                help="6 is the most permissive, 1 is the most restrictive"
+                help="6 is the most permissive, 1 is the most restrictive."
             )
         else:
             safety_tolerance = None  # Not applicable
 
         enable_safety_checker = st.checkbox(
-            "Enable safety checker",
+            "Enable Safety Checker",
             value=True,
-            help="If unchecked, the safety checker will be disabled"
+            help="If unchecked, the safety checker will be disabled."
         )
 
         # Seed input (common for both modes)
-        seed_input = st.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
+        seed_input = st.text_input(
+            "Seed (optional):",
+            help="Enter an integer for reproducible generation. Leave empty for random results."
+        )
 
     # Generate button
     if st.button("Generate Image"):
@@ -327,7 +353,7 @@ if api_key:
             st.error("Please enter your API key.")
         elif not prompt:
             st.error("Please enter a prompt.")
-        elif generation_mode == "Image-to-Image" and not image_data_uri:
+        elif generation_mode == "Image-to-Image" and not st.session_state.uploaded_image:
             st.error("Please upload an image for Image-to-Image generation.")
         elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
             st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
@@ -353,7 +379,7 @@ if api_key:
                     safety_tolerance=safety_tolerance if generation_mode == "Text-to-Image" else None,
                     enable_safety_checker=enable_safety_checker,
                     seed=seed_value,
-                    image_base64=image_data_uri if generation_mode == "Image-to-Image" else None,
+                    image_base64=st.session_state.image_data_uri if generation_mode == "Image-to-Image" else None,
                     strength=strength if generation_mode == "Image-to-Image" else None,
                     lora_path=lora_path_input if generation_mode == "Image-to-Image" else None,
                     lora_scale=lora_scale_input if generation_mode == "Image-to-Image" else None
@@ -433,11 +459,11 @@ if api_key:
                 st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
 
             with col2:
-               st.markdown("<p>", unsafe_allow_html=True)
+                st.markdown("<p></p>", unsafe_allow_html=True)
                 
             with col3:
                  # Display the prompt used
-                st.subheader("**Prompt used:**")
+                st.subheader("**Prompt Used:**")
                 st.code(item['prompt'])
                 st.divider()
                  # Display additional info
