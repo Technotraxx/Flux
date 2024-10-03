@@ -139,7 +139,7 @@ if api_key:
             payload["num_inference_steps"] = num_inference_steps
             payload["guidance_scale"] = guidance_scale
 
-        # Debug: Show payload
+        # Debug: Show payload (optional)
         # st.write("Payload:", payload)
     
         # Submit the request
@@ -202,10 +202,21 @@ if api_key:
         if image:
             st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
             st.write(f"**Image Size:** {image_size_info}")
+        
+        # Strength slider for Image-to-Image
+        strength = st.slider(
+            "Strength:",
+            min_value=0.00,
+            max_value=1.00,
+            value=0.95,
+            step=0.05,
+            help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
+        )
     else:
         image = None
         image_data_uri = None
         image_size_info = None
+        strength = None
 
     # Sidebar: LoRA Configuration
     with st.sidebar.expander("LoRA Configuration", expanded=True):
@@ -292,12 +303,12 @@ if api_key:
             
             # Predefined image sizes mapping
             predefined_sizes = {
-                "square_hd": {"width": 1080, "height": 1080},
+                "square_hd": {"width": 1024, "height": 1024},
                 "square": {"width": 512, "height": 512},
-                "portrait_4_3": {"width": 800, "height": 600},
-                "portrait_16_9": {"width": 1280, "height": 720},
-                "landscape_4_3": {"width": 600, "height": 800},
-                "landscape_16_9": {"width": 720, "height": 1280}
+                "portrait_4_3": {"width": 768, "height": 1024},
+                "portrait_16_9": {"width": 512, "height": 1024},
+                "landscape_4_3": {"width": 1024, "height": 768},
+                "landscape_16_9": {"width": 1024, "height": 512}
             }
             image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
 
@@ -320,19 +331,19 @@ if api_key:
                 max_num_images = 1  # Default to 1 if model is unrecognized
 
         # Number of images input
-        if generation_mode == "Text-to-Image" or generation_mode == "Image-to-Image":
-            if max_num_images > 1:
-                num_images = st.number_input(
-                    "Number of Images:",
-                    min_value=1,
-                    max_value=max_num_images,
-                    value=2,
-                    step=1,
-                    help=f"Number of images to generate in one go (up to {max_num_images} for selected model)."
-                )
-            else:
-                st.write("**Number of Images:** 1 (fixed)")
-                num_images = 1
+        if generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and model == "fal-ai/flux/dev"):
+            num_images = st.number_input(
+                "Number of Images:",
+                min_value=1,
+                max_value=max_num_images,
+                value=2 if generation_mode == "Image-to-Image" and model == "fal-ai/flux/dev" else 1,
+                step=1,
+                help=f"Number of images to generate in one go (up to {max_num_images} for selected model)."
+            )
+        else:
+            # Fixed to 1 for Pro models in Image-to-Image
+            st.write("**Number of Images:** 1 (fixed)")
+            num_images = 1
 
         num_inference_steps = st.slider(
             "Inference Steps:",
@@ -408,7 +419,7 @@ if api_key:
                     enable_safety_checker=enable_safety_checker,
                     seed=seed_value,
                     image_base64=st.session_state.image_data_uri if generation_mode == "Image-to-Image" else None,
-                    strength=None,  # Strength is not used anymore as per latest requirements
+                    strength=strength if generation_mode == "Image-to-Image" else None,
                     lora_path=lora_path_input if generation_mode == "Image-to-Image" else None,
                     lora_scale=lora_scale_input if generation_mode == "Image-to-Image" else None
                 )
