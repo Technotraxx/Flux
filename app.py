@@ -9,16 +9,20 @@ from datetime import datetime
 import base64
 
 # Set page config
-st.set_page_config(page_title="FLUX AI Image Generator", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="FLUX AI Image Generator",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Custom CSS
+# Custom CSS for styling
 st.markdown("""
 <style>
     .reportview-container {
-        background: #f0f2f6
+        background: #f0f2f6;
     }
     .sidebar .sidebar-content {
-        background: #ffffff
+        background: #ffffff;
     }
     .Widget>label {
         color: #31333F;
@@ -43,17 +47,16 @@ st.markdown("""
     <hr>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# Sidebar for generation parameters
 st.sidebar.title("Generation Parameters")
 
 # API key input in sidebar
 api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 
-# Initialize session state
+# Initialize session state for history and current generation
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-# Initialize session state for current generation
 if 'current_generation' not in st.session_state:
     st.session_state.current_generation = []
 
@@ -84,7 +87,7 @@ if api_key:
     ):
         start_time = time.time()
         
-        # Create a placeholder for the status message
+        # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
     
@@ -103,7 +106,7 @@ if api_key:
             payload["safety_tolerance"] = safety_tolerance
     
         # Add seed to payload if provided
-        if seed:
+        if seed is not None:
             payload["seed"] = int(seed)
         
         # Add image_base64 and strength if provided (for Image-to-Image)
@@ -159,6 +162,9 @@ if api_key:
                 # Encode image to Base64
                 image_base64 = base64.b64encode(img_bytes).decode('utf-8')
                 image_data_uri = f"data:image/jpeg;base64,{image_base64}"
+                
+                # Display uploaded image size
+                st.write(f"**Uploaded Image Size:** {image.width} x {image.height} pixels")
             except Exception as e:
                 st.error(f"Error processing the uploaded image: {e}")
                 image_data_uri = None
@@ -214,33 +220,52 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
-        # Image size selection with Custom Size option
-        image_size_option = st.selectbox(
-            "Image size:",
-            ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "Custom Size"],
-            help="Choose the aspect ratio of the generated image"
-        )
-        
-        if image_size_option == "Custom Size":
-            custom_width = st.number_input(
-                "Enter image width (pixels):",
-                min_value=1,
-                max_value=4096,
-                value=512,
-                step=1,
-                help="Specify the width of the generated image in pixels."
+        # Image size selection
+        if generation_mode == "Image-to-Image":
+            image_size_option = st.selectbox(
+                "Image size:",
+                ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "Custom Size"],
+                help="Choose the aspect ratio of the generated image"
             )
-            custom_height = st.number_input(
-                "Enter image height (pixels):",
-                min_value=1,
-                max_value=4096,
-                value=512,
-                step=1,
-                help="Specify the height of the generated image in pixels."
-            )
-            image_size = {"width": custom_width, "height": custom_height}
+            
+            if image_size_option == "Custom Size":
+                custom_width = st.number_input(
+                    "Enter image width (pixels):",
+                    min_value=1,
+                    max_value=4096,
+                    value=512,
+                    step=1,
+                    help="Specify the width of the generated image in pixels."
+                )
+                custom_height = st.number_input(
+                    "Enter image height (pixels):",
+                    min_value=1,
+                    max_value=4096,
+                    value=512,
+                    step=1,
+                    help="Specify the height of the generated image in pixels."
+                )
+                # Assuming the API can accept custom sizes as separate width and height
+                # If the API requires a different format, adjust accordingly
+                image_size = {"width": custom_width, "height": custom_height}
+            else:
+                # Predefined image sizes mapping
+                predefined_sizes = {
+                    "square_hd": {"width": 1080, "height": 1080},
+                    "square": {"width": 512, "height": 512},
+                    "portrait_4_3": {"width": 800, "height": 600},
+                    "portrait_16_9": {"width": 1280, "height": 720},
+                    "landscape_4_3": {"width": 600, "height": 800},
+                    "landscape_16_9": {"width": 720, "height": 1280}
+                }
+                image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
         else:
-            # Predefined image sizes mapping
+            # In Text-to-Image mode, do not offer custom size
+            image_size_option = st.selectbox(
+                "Image size:",
+                ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
+                help="Choose the aspect ratio of the generated image"
+            )
             predefined_sizes = {
                 "square_hd": {"width": 1080, "height": 1080},
                 "square": {"width": 512, "height": 512},
@@ -378,6 +403,11 @@ if api_key:
                     # Add to history
                     st.session_state.history.append(st.session_state.current_generation[-1])
                 
+            except fal_client.FalClientError as e:
+                if e.status_code == 422 and "not public" in str(e):
+                    st.error(f"The selected model '{model}' is not accessible. Please choose a different model or contact support.")
+                else:
+                    st.error(f"An unexpected error occurred: {e}")
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
 
