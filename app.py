@@ -292,6 +292,9 @@ if api_key:
             help="If unchecked, the safety checker will be disabled"
         )
 
+        # Seed input (common for both modes)
+        seed_input = st.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
+
     # Generate button
     if st.button("Generate Image"):
         # Validation
@@ -398,7 +401,7 @@ if api_key:
                 
                 # Display the image at 100% of its original size
                 st.image(item['image'], caption=f"Generated Image {idx+1}", use_column_width=True)
-    
+
             with col2:
                st.markdown("<p>", unsafe_allow_html=True)
                 
