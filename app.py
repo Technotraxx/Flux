@@ -102,7 +102,7 @@ if api_key:
         # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
-    
+
         # Prepare the request payload
         payload = {
             "prompt": prompt,
@@ -110,11 +110,11 @@ if api_key:
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
-    
+
         # Add safety_tolerance only for Text-to-Image models
         if generation_mode == "Text-to-Image" and model != "fal-ai/flux-general/image-to-image":
             payload["safety_tolerance"] = safety_tolerance
-    
+
         # Add seed to payload if provided
         if seed:
             payload["seed"] = int(seed)
@@ -141,7 +141,7 @@ if api_key:
 
         # Debug: Show payload (optional)
         # st.write("Payload:", payload)
-    
+
         # Submit the request
         handler = fal_client.submit(model, payload)
         
@@ -262,6 +262,16 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
+        # Predefined image sizes as per user instruction
+        predefined_sizes = {
+            "square_hd": {"width": 1024, "height": 1024},
+            "square": {"width": 512, "height": 512},
+            "portrait_4_3": {"width": 768, "height": 1024},
+            "portrait_16_9": {"width": 512, "height": 1024},
+            "landscape_4_3": {"width": 1024, "height": 768},
+            "landscape_16_9": {"width": 1024, "height": 512}
+        }
+
         # Image size selection
         if generation_mode == "Image-to-Image":
             # Allow users to choose predefined sizes or use the uploaded image's size
@@ -278,15 +288,7 @@ if api_key:
                     st.warning("Please upload an image to use its size.")
                     image_size = {"width": 512, "height": 512}  # Default fallback
             else:
-                # Predefined image sizes mapping
-                predefined_sizes = {
-                    "square_hd": {"width": 1080, "height": 1080},
-                    "square": {"width": 512, "height": 512},
-                    "portrait_4_3": {"width": 800, "height": 600},
-                    "portrait_16_9": {"width": 1280, "height": 720},
-                    "landscape_4_3": {"width": 600, "height": 800},
-                    "landscape_16_9": {"width": 720, "height": 1280}
-                }
+                # Use the predefined_sizes provided by the user
                 image_size_option = st.selectbox(
                     "Select Image Size:",
                     list(predefined_sizes.keys()),
@@ -297,19 +299,9 @@ if api_key:
             # Image size selection without Custom Size
             image_size_option = st.selectbox(
                 "Image size:",
-                ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
+                list(predefined_sizes.keys()),
                 help="Choose the aspect ratio of the generated image"
             )
-            
-            # Predefined image sizes mapping
-            predefined_sizes = {
-                "square_hd": {"width": 1024, "height": 1024},
-                "square": {"width": 512, "height": 512},
-                "portrait_4_3": {"width": 768, "height": 1024},
-                "portrait_16_9": {"width": 512, "height": 1024},
-                "landscape_4_3": {"width": 1024, "height": 768},
-                "landscape_16_9": {"width": 1024, "height": 512}
-            }
             image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
 
         # Determine maximum number of images based on the selected model
@@ -319,24 +311,21 @@ if api_key:
                 max_num_images = 1
             elif model == "fal-ai/flux/dev":
                 max_num_images = 4
-            else:
-                max_num_images = 1  # Default to 1 if model is unrecognized
-        else:
-            # Image-to-Image mode: Pro Models allow only 1 image; Dev Model allows up to 4 images
-            if model in ["fal-ai/flux-pro/v1.1", "fal-ai/flux-pro", "fal-ai/flux-realism"]:
-                max_num_images = 1
-            elif model == "fal-ai/flux/dev":
+            elif model =="fal-ai/flux-general/image-to-image":
                 max_num_images = 4
             else:
                 max_num_images = 1  # Default to 1 if model is unrecognized
+        else:
+            # Image-to-Image mode: Allow up to 4 images
+            max_num_images = 4  # Assuming all Image-to-Image models support up to 4 images
 
         # Number of images input
-        if generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and model == "fal-ai/flux/dev"):
+        if generation_mode == "Text-to-Image" or generation_mode == "Image-to-Image":
             num_images = st.number_input(
                 "Number of Images:",
                 min_value=1,
                 max_value=max_num_images,
-                value=2 if generation_mode == "Image-to-Image" and model == "fal-ai/flux/dev" else 1,
+                value=2 if generation_mode == "Image-to-Image" else 1,
                 step=1,
                 help=f"Number of images to generate in one go (up to {max_num_images} for selected model)."
             )
