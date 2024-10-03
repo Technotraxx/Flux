@@ -102,21 +102,19 @@ if api_key:
         # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
-    
+
         # Prepare the request payload
         payload = {
             "prompt": prompt,
             "image_size": image_size,
-            "num_inference_steps": num_inference_steps,
-            "guidance_scale": guidance_scale,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
-    
+
         # Add safety_tolerance only for Text-to-Image models
         if model != "fal-ai/flux-general/image-to-image":
             payload["safety_tolerance"] = safety_tolerance
-    
+
         # Add seed to payload if provided
         if seed:
             payload["seed"] = int(seed)
@@ -135,7 +133,12 @@ if api_key:
                     "scale": float(lora_scale)
                 }
             ]
-    
+        
+        # Conditionally add inference_steps and guidance_scale
+        if model != "fal-ai/flux-pro/v1.1":
+            payload["num_inference_steps"] = num_inference_steps
+            payload["guidance_scale"] = guidance_scale
+
         # Submit the request
         handler = fal_client.submit(model, payload)
         
@@ -250,7 +253,7 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
-        # Image size selection with Custom Size option only for Image-to-Image
+        # Image size selection
         if generation_mode == "Image-to-Image":
             # Allow users to choose predefined sizes or use the uploaded image's size
             size_option = st.selectbox(
@@ -293,10 +296,10 @@ if api_key:
             predefined_sizes = {
                 "square_hd": {"width": 1080, "height": 1080},
                 "square": {"width": 512, "height": 512},
-                "portrait_4_3": {"width": 768, "height": 1024},
-                "portrait_16_9": {"width": 576, "height": 1280},
-                "landscape_4_3": {"width": 1024, "height": 768},
-                "landscape_16_9": {"width": 1280, "height": 576}
+                "portrait_4_3": {"width": 800, "height": 600},
+                "portrait_16_9": {"width": 1280, "height": 720},
+                "landscape_4_3": {"width": 600, "height": 800},
+                "landscape_16_9": {"width": 720, "height": 1280}
             }
             image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
 
@@ -437,11 +440,16 @@ if api_key:
                     unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
                     filename = f"image_{used_seed}_{generation_time}_{unique_id}.jpg"
                     
+                    # Validate content_type
+                    content_type = image_info.get('content_type', "image/jpeg")
+                    if not isinstance(content_type, str):
+                        content_type = "image/jpeg"
+
                     # Store image and info in session state
                     st.session_state.current_generation.append({
                         'image': img,
                         'prompt': result.get('prompt', prompt),
-                        'content_type': image_info.get('content_type', 'image/jpeg'),
+                        'content_type': content_type,
                         'has_nsfw_concepts': result.get('has_nsfw_concepts', [False])[idx],
                         'filename': filename,
                         'seed': used_seed,
