@@ -104,7 +104,7 @@ if api_key:
         # Add image_url and strength if provided (for Image-to-Image)
         if image_url:
             payload["image_url"] = image_url
-            if strength:
+            if strength is not None:
                 payload["strength"] = float(strength)
         
         # Add LoRA paths if provided
@@ -170,19 +170,22 @@ if api_key:
 
     # Sidebar parameters
     with st.sidebar.expander("Advanced Settings", expanded=False):
-        model_options = [
-            "fal-ai/flux-pro",
-            "fal-ai/flux/dev",
-            "fal-ai/flux-realism"
-        ]
-        if generation_mode == "Image-to-Image":
-            model_options.append("fal-ai/flux-general/image-to-image")
-        
-        model = st.selectbox(
-            "Choose AI Model:",
-            model_options,
-            help="Select the AI model for image generation"
-        )
+        if generation_mode == "Text-to-Image":
+            model_options = [
+                "fal-ai/flux-pro",
+                "fal-ai/flux/dev",
+                "fal-ai/flux-realism"
+            ]
+            model = st.selectbox(
+                "Choose AI Model:",
+                model_options,
+                help="Select the AI model for image generation"
+            )
+        else:
+            # Fixed model for Image-to-Image
+            model = "fal-ai/flux-general/image-to-image"
+            st.markdown(f"**Model:** {model}")
+
         image_size = st.selectbox(
             "Image size:",
             ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
@@ -233,14 +236,22 @@ if api_key:
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
-    
+
+        # Seed input (common for both modes)
+        seed_input = st.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
+
     # Generate button
     if st.button("Generate Image"):
         if api_key and prompt and (generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and image_url)):
             try:
                 # Convert seed to integer if provided, otherwise pass None
-                seed_input = st.sidebar.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
-                seed_value = int(seed_input) if seed_input and seed_input.lstrip("-").isdigit() else None
+                seed_value = None
+                if seed_input:
+                    try:
+                        seed_value = int(seed_input)
+                    except ValueError:
+                        st.error("Seed must be an integer.")
+                        st.stop()
 
                 # Call generate_image with appropriate parameters
                 result = generate_image(
@@ -269,10 +280,18 @@ if api_key:
                 st.session_state.current_generation = []
                 
                 for idx, image_info in enumerate(result['images']):
-                    image_url_generated = image_info['url']
+                    image_url_generated = image_info.get('url')
+                    if not image_url_generated:
+                        st.error("Received an image without a URL from the API.")
+                        continue
+
                     response = requests.get(image_url_generated)
+                    if response.status_code != 200:
+                        st.error(f"Failed to fetch image from URL: {image_url_generated}")
+                        continue
+
                     img = Image.open(BytesIO(response.content))
-    
+
                     # Generate filename
                     generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
                     unique_id = str(uuid.uuid4())[:8]  # Use first 8 characters of UUID
@@ -297,7 +316,12 @@ if api_key:
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
         else:
-            st.error("Please enter your API key, prompt, and upload an image for Image-to-Image generation.")
+            if not api_key:
+                st.error("Please enter your API key.")
+            if not prompt:
+                st.error("Please enter a prompt.")
+            if generation_mode == "Image-to-Image" and not image_url:
+                st.error("Please upload an image for Image-to-Image generation.")
     
     # Display current generation
     if st.session_state.current_generation:
@@ -309,10 +333,10 @@ if api_key:
                 # Download button
                 img_byte_arr = BytesIO()
                 item['image'].save(img_byte_arr, format='JPEG')
-                img_byte_arr = img_byte_arr.getvalue()
+                img_bytes = img_byte_arr.getvalue()
                 st.download_button(
                     label=f"Download Image {idx+1}",
-                    data=img_byte_arr,
+                    data=img_bytes,
                     file_name=item['filename'],
                     mime="image/jpeg"
                 )
@@ -333,7 +357,7 @@ if api_key:
                 st.write(f"**Seed:** {item['seed']}")
                 st.write(f"Content Type: {item['content_type']}")
                 st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
-    
+
     # History display
     if st.session_state.history:
         st.header("Generation History")
@@ -364,7 +388,7 @@ if api_key:
                         file_name=item.get('filename', f"generated_image_{i}.jpg"),
                         mime="image/jpeg"
                     )
-    
+
     # Clear history button
     if st.session_state.history:
         if st.button("Clear History"):
