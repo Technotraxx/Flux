@@ -6,6 +6,7 @@ from io import BytesIO
 import time
 import uuid
 from datetime import datetime
+import base64
 
 # Set page config
 st.set_page_config(page_title="FLUX AI Image Generator", layout="wide", initial_sidebar_state="expanded")
@@ -76,7 +77,7 @@ if api_key:
         safety_tolerance,
         enable_safety_checker,
         seed=None,
-        image_url=None,
+        image_base64=None,
         strength=None,
         loras=None
     ):
@@ -101,9 +102,9 @@ if api_key:
         if seed:
             payload["seed"] = int(seed)
         
-        # Add image_url and strength if provided (for Image-to-Image)
-        if image_url:
-            payload["image_url"] = image_url
+        # Add image_base64 and strength if provided (for Image-to-Image)
+        if image_base64:
+            payload["image_url"] = image_base64  # Using image_url field to send Base64 data URI
             if strength is not None:
                 payload["strength"] = float(strength)
         
@@ -144,18 +145,19 @@ if api_key:
         
         if uploaded_image:
             try:
-                image = Image.open(uploaded_image)
+                image = Image.open(uploaded_image).convert("RGB")  # Ensure image is in RGB format
                 buffered = BytesIO()
-                image.save(buffered, format="PNG")
-                img_byte_arr = buffered.getvalue()
+                image.save(buffered, format="JPEG")
+                img_bytes = buffered.getvalue()
                 
-                # Upload the image using fal_client to get a URL
-                image_url = fal_client.upload_file(uploaded_image)
+                # Encode image to Base64
+                image_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                image_data_uri = f"data:image/jpeg;base64,{image_base64}"
             except Exception as e:
                 st.error(f"Error processing the uploaded image: {e}")
-                image_url = None
+                image_data_uri = None
         else:
-            image_url = None
+            image_data_uri = None
 
         # LoRA paths input
         lora_input = st.text_area(
@@ -164,7 +166,7 @@ if api_key:
         )
         lora_paths = [line.strip() for line in lora_input.split('\n') if line.strip()]
     else:
-        image_url = None
+        image_data_uri = None
         strength = None
         lora_paths = None
 
@@ -242,7 +244,7 @@ if api_key:
 
     # Generate button
     if st.button("Generate Image"):
-        if api_key and prompt and (generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and image_url)):
+        if api_key and prompt and (generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and image_data_uri)):
             try:
                 # Convert seed to integer if provided, otherwise pass None
                 seed_value = None
@@ -264,7 +266,7 @@ if api_key:
                     safety_tolerance=safety_tolerance,
                     enable_safety_checker=enable_safety_checker,
                     seed=seed_value,
-                    image_url=image_url if generation_mode == "Image-to-Image" else None,
+                    image_base64=image_data_uri if generation_mode == "Image-to-Image" else None,
                     strength=strength if generation_mode == "Image-to-Image" else None,
                     loras=lora_paths if generation_mode == "Image-to-Image" else None
                 )
@@ -279,7 +281,7 @@ if api_key:
                 # Clear previous generation
                 st.session_state.current_generation = []
                 
-                for idx, image_info in enumerate(result['images']):
+                for idx, image_info in enumerate(result.get('images', [])):
                     image_url_generated = image_info.get('url')
                     if not image_url_generated:
                         st.error("Received an image without a URL from the API.")
@@ -290,7 +292,7 @@ if api_key:
                         st.error(f"Failed to fetch image from URL: {image_url_generated}")
                         continue
 
-                    img = Image.open(BytesIO(response.content))
+                    img = Image.open(BytesIO(response.content)).convert("RGB")
 
                     # Generate filename
                     generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -320,9 +322,9 @@ if api_key:
                 st.error("Please enter your API key.")
             if not prompt:
                 st.error("Please enter a prompt.")
-            if generation_mode == "Image-to-Image" and not image_url:
+            if generation_mode == "Image-to-Image" and not image_data_uri:
                 st.error("Please upload an image for Image-to-Image generation.")
-    
+
     # Display current generation
     if st.session_state.current_generation:
         st.header("Current Generation")
