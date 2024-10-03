@@ -79,7 +79,8 @@ if api_key:
         seed=None,
         image_base64=None,
         strength=None,
-        loras=None
+        lora_path=None,
+        lora_scale=None
     ):
         start_time = time.time()
         
@@ -108,12 +109,14 @@ if api_key:
             if strength is not None:
                 payload["strength"] = float(strength)
         
-        # Add LoRA paths if provided
-        if loras:
-            lora_list = []
-            for lora_path in loras:
-                lora_list.append({"path": lora_path, "scale": 1.0})  # Default scale can be modified as needed
-            payload["loras"] = lora_list
+        # Add LoRA if provided
+        if lora_path and lora_scale:
+            payload["loras"] = [
+                {
+                    "path": lora_path,
+                    "scale": float(lora_scale)
+                }
+            ]
     
         # Submit the request
         handler = fal_client.submit(model, payload)
@@ -159,16 +162,26 @@ if api_key:
         else:
             image_data_uri = None
 
-        # LoRA paths input
-        lora_input = st.text_area(
-            "Enter LoRA Paths (one per line):",
-            help="Provide URLs or file paths to LoRA weights. Enter one path per line."
+        # LoRA path input
+        lora_path_input = st.text_input(
+            "Enter LoRA Path:",
+            help="Provide the URL or file path to the LoRA weights."
         )
-        lora_paths = [line.strip() for line in lora_input.split('\n') if line.strip()]
+
+        # LoRA scale input
+        lora_scale_input = st.number_input(
+            "Enter LoRA Scale:",
+            min_value=0.1,
+            max_value=5.0,
+            value=1.0,
+            step=0.1,
+            help="Specify the scale for the LoRA weights."
+        )
     else:
         image_data_uri = None
         strength = None
-        lora_paths = None
+        lora_path_input = None
+        lora_scale_input = None
 
     # Sidebar parameters
     with st.sidebar.expander("Advanced Settings", expanded=False):
@@ -234,7 +247,7 @@ if api_key:
                 "Strength:",
                 min_value=0.0,
                 max_value=1.0,
-                value=0.85,
+                value=0.95,
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
@@ -255,6 +268,16 @@ if api_key:
                         st.error("Seed must be an integer.")
                         st.stop()
 
+                # Validate LoRA inputs for Image-to-Image
+                lora_path = None
+                lora_scale = None
+                if generation_mode == "Image-to-Image":
+                    if not lora_path_input:
+                        st.error("Please enter a LoRA path for Image-to-Image generation.")
+                        st.stop()
+                    lora_path = lora_path_input
+                    lora_scale = lora_scale_input
+
                 # Call generate_image with appropriate parameters
                 result = generate_image(
                     model=model,
@@ -268,7 +291,8 @@ if api_key:
                     seed=seed_value,
                     image_base64=image_data_uri if generation_mode == "Image-to-Image" else None,
                     strength=strength if generation_mode == "Image-to-Image" else None,
-                    loras=lora_paths if generation_mode == "Image-to-Image" else None
+                    lora_path=lora_path if generation_mode == "Image-to-Image" else None,
+                    lora_scale=lora_scale if generation_mode == "Image-to-Image" else None
                 )
                 
                 # Display seed information
@@ -324,7 +348,7 @@ if api_key:
                 st.error("Please enter a prompt.")
             if generation_mode == "Image-to-Image" and not image_data_uri:
                 st.error("Please upload an image for Image-to-Image generation.")
-
+    
     # Display current generation
     if st.session_state.current_generation:
         st.header("Current Generation")
