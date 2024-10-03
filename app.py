@@ -160,58 +160,62 @@ if api_key:
 
     # Conditional inputs based on generation mode
     if generation_mode == "Image-to-Image":
-        # Image upload
-        uploaded_image = st.file_uploader("Upload an image for modification:", type=["png", "jpg", "jpeg"])
-        
-        if uploaded_image:
-            try:
-                image = Image.open(uploaded_image).convert("RGB")  # Ensure image is in RGB format
-                buffered = BytesIO()
-                image.save(buffered, format="JPEG")
-                img_bytes = buffered.getvalue()
-                
-                # Encode image to Base64
-                image_base64 = base64.b64encode(img_bytes).decode('utf-8')
-                image_data_uri = f"data:image/jpeg;base64,{image_base64}"
-                
-                # Get image size
-                width, height = image.size
-                image_size_info = f"Width: {width}px, Height: {height}px"
-                
-                # Store in session state
-                st.session_state.uploaded_image = image
-                st.session_state.image_data_uri = image_data_uri
-                st.session_state.image_size_info = image_size_info
-            except Exception as e:
-                st.error(f"Error processing the uploaded image: {e}")
-                st.session_state.uploaded_image = None
-                st.session_state.image_data_uri = None
-                st.session_state.image_size_info = None
-        else:
-            # If no new image is uploaded, use the existing one from session_state
-            if st.session_state.uploaded_image:
-                image = st.session_state.uploaded_image
-                image_data_uri = st.session_state.image_data_uri
-                image_size_info = st.session_state.image_size_info
-            else:
-                image = None
-                image_data_uri = None
-                image_size_info = None
+        # Arrange image upload, preview, size info, and strength slider in columns
+        col1, col2 = st.columns(2)
 
-        # Display uploaded image with reduced size
-        if image:
-            st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
-            st.write(f"**Image Size:** {image_size_info}")
-        
-        # Strength slider for Image-to-Image
-        strength = st.slider(
-            "Strength:",
-            min_value=0.00,
-            max_value=1.00,
-            value=0.95,
-            step=0.05,
-            help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
-        )
+        with col1:
+            # Image upload
+            uploaded_image = st.file_uploader("Upload an image for modification:", type=["png", "jpg", "jpeg"])
+            if uploaded_image:
+                try:
+                    image = Image.open(uploaded_image).convert("RGB")  # Ensure image is in RGB format
+                    buffered = BytesIO()
+                    image.save(buffered, format="JPEG")
+                    img_bytes = buffered.getvalue()
+                    
+                    # Encode image to Base64
+                    image_base64 = base64.b64encode(img_bytes).decode('utf-8')
+                    image_data_uri = f"data:image/jpeg;base64,{image_base64}"
+                    
+                    # Get image size
+                    width, height = image.size
+                    image_size_info = f"Width: {width}px, Height: {height}px"
+                    
+                    # Store in session state
+                    st.session_state.uploaded_image = image
+                    st.session_state.image_data_uri = image_data_uri
+                    st.session_state.image_size_info = image_size_info
+                except Exception as e:
+                    st.error(f"Error processing the uploaded image: {e}")
+                    st.session_state.uploaded_image = None
+                    st.session_state.image_data_uri = None
+                    st.session_state.image_size_info = None
+            else:
+                # If no new image is uploaded, use the existing one from session_state
+                if st.session_state.uploaded_image:
+                    image = st.session_state.uploaded_image
+                    image_data_uri = st.session_state.image_data_uri
+                    image_size_info = st.session_state.image_size_info
+                else:
+                    image = None
+                    image_data_uri = None
+                    image_size_info = None
+
+        with col2:
+            # Display uploaded image with reduced size
+            if image:
+                st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
+                st.write(f"**Image Size:** {image_size_info}")
+            
+            # Strength slider for Image-to-Image
+            strength = st.slider(
+                "Strength:",
+                min_value=0.00,
+                max_value=1.00,
+                value=0.95,
+                step=0.05,
+                help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
+            )
     else:
         image = None
         image_data_uri = None
