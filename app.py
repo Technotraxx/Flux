@@ -112,7 +112,7 @@ if api_key:
         }
 
         # Add safety_tolerance only for Text-to-Image models
-        if generation_mode == "Text-to-Image" and model != "fal-ai/flux-general/image-to-image":
+        if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
             payload["safety_tolerance"] = safety_tolerance
 
         # Add seed to payload if provided
@@ -135,9 +135,15 @@ if api_key:
             ]
         
         # Conditionally add inference_steps and guidance_scale
-        if model != "fal-ai/flux-pro/v1.1":
+        # For Text-to-Image models, these are always sent
+        if generation_mode == "Text-to-Image":
             payload["num_inference_steps"] = num_inference_steps
             payload["guidance_scale"] = guidance_scale
+        else:
+            # For Image-to-Image, exclude these if using a specific model version
+            if model != "fal-ai/flux-pro/v1.1":
+                payload["num_inference_steps"] = num_inference_steps
+                payload["guidance_scale"] = guidance_scale
 
         # Debug: Show payload (optional)
         # st.write("Payload:", payload)
@@ -252,6 +258,9 @@ if api_key:
 
     # Sidebar: Advanced Settings
     with st.sidebar.expander("Advanced Settings", expanded=False):
+        # Predefined enum values for image_size
+        image_size_options = ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
+
         if generation_mode == "Text-to-Image":
             # List of public models, including the new model pro1.1
             model_options = [
@@ -265,24 +274,30 @@ if api_key:
                 model_options,
                 help="Select the AI model for image generation"
             )
+
+            # Image size selection restricted to enum values
+            image_size = st.selectbox(
+                "Image Size:",
+                image_size_options,
+                index=image_size_options.index("landscape_4_3"),
+                help="Choose the size of the generated image."
+            )
         else:
             # Fixed model for Image-to-Image
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
-        # Predefined image sizes as per user instruction
-        predefined_sizes = {
-            "square_hd": {"width": 1024, "height": 1024},
-            "square": {"width": 512, "height": 512},
-            "portrait_4_3": {"width": 768, "height": 1024},
-            "portrait_16_9": {"width": 512, "height": 1024},
-            "landscape_4_3": {"width": 1024, "height": 768},
-            "landscape_16_9": {"width": 1024, "height": 512}
-        }
+            # Predefined image sizes as per user instruction
+            predefined_sizes = {
+                "square_hd": {"width": 1024, "height": 1024},
+                "square": {"width": 512, "height": 512},
+                "portrait_4_3": {"width": 768, "height": 1024},
+                "portrait_16_9": {"width": 512, "height": 1024},
+                "landscape_4_3": {"width": 1024, "height": 768},
+                "landscape_16_9": {"width": 1024, "height": 512}
+            }
 
-        # Image size selection
-        if generation_mode == "Image-to-Image":
-            # Allow users to choose predefined sizes or use the uploaded image's size
+            # Image size selection
             size_option = st.selectbox(
                 "Image Size Option:",
                 ["Use Uploaded Image Size", "Select Predefined Size"],
@@ -300,17 +315,9 @@ if api_key:
                 image_size_option = st.selectbox(
                     "Select Image Size:",
                     list(predefined_sizes.keys()),
-                    help="Choose the aspect ratio of the generated image"
+                    help="Choose the aspect ratio of the generated image."
                 )
                 image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
-        else:
-            # Image size selection without Custom Size
-            image_size_option = st.selectbox(
-                "Image size:",
-                list(predefined_sizes.keys()),
-                help="Choose the aspect ratio of the generated image"
-            )
-            image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
 
         # Determine maximum number of images based on the selected model
         if generation_mode == "Text-to-Image":
@@ -319,8 +326,6 @@ if api_key:
                 max_num_images = 1
             elif model == "fal-ai/flux/dev":
                 max_num_images = 4
-            elif model =="fal-ai/flux-general/image-to-image":
-                max_num_images = 4
             else:
                 max_num_images = 1  # Default to 1 if model is unrecognized
         else:
@@ -328,7 +333,7 @@ if api_key:
             max_num_images = 4  # Assuming all Image-to-Image models support up to 4 images
 
         # Number of images input
-        if generation_mode == "Text-to-Image" or generation_mode == "Image-to-Image":
+        if generation_mode in ["Text-to-Image", "Image-to-Image"]:
             num_images = st.number_input(
                 "Number of Images:",
                 min_value=1,
@@ -389,7 +394,7 @@ if api_key:
             st.error("Please enter your API key.")
         elif not prompt:
             st.error("Please enter a prompt.")
-        elif generation_mode == "Image-to-Image" and not st.session_state.uploaded_image:
+        elif generation_mode == "Image-to-Image" and not st.session_state.uploaded_image and size_option == "Use Uploaded Image Size":
             st.error("Please upload an image for Image-to-Image generation.")
         elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
             st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
@@ -404,11 +409,19 @@ if api_key:
                         st.error("Seed must be an integer.")
                         st.stop()
 
+                # For Text-to-Image, image_size should be a string from enum
+                if generation_mode == "Text-to-Image":
+                    # image_size is already selected as enum string
+                    payload_image_size = image_size
+                else:
+                    # For Image-to-Image, image_size can be dict or enum string
+                    payload_image_size = image_size
+
                 # Call generate_image with appropriate parameters
                 result = generate_image(
                     model=model,
                     prompt=prompt,
-                    image_size=image_size,
+                    image_size=payload_image_size,
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
                     num_images=num_images,
