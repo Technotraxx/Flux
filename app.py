@@ -66,7 +66,7 @@ if api_key:
         st.error("The 'fal_client' module is not installed. Please install it using `pip install fal-client`.")
         st.stop()
 
-    # Update the generate_image function to handle both Text-to-Image and Image-to-Image
+    # Function to generate image
     def generate_image(
         model,
         prompt,
@@ -95,9 +95,12 @@ if api_key:
             "num_inference_steps": num_inference_steps,
             "guidance_scale": guidance_scale,
             "num_images": num_images,
-            "safety_tolerance": safety_tolerance,
             "enable_safety_checker": enable_safety_checker
         }
+    
+        # Add safety_tolerance only for Text-to-Image models
+        if model != "fal-ai/flux-general/image-to-image":
+            payload["safety_tolerance"] = safety_tolerance
     
         # Add seed to payload if provided
         if seed:
@@ -177,6 +180,16 @@ if api_key:
             step=0.1,
             help="Specify the scale for the LoRA weights."
         )
+
+        # Strength control moved to main frame
+        strength = st.slider(
+            "Strength:",
+            min_value=0.00,
+            max_value=1.00,
+            value=0.95,
+            step=0.05,
+            help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
+        )
     else:
         image_data_uri = None
         strength = None
@@ -201,16 +214,48 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
 
-        image_size = st.selectbox(
+        # Image size selection with Custom Size option
+        image_size_option = st.selectbox(
             "Image size:",
-            ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"],
+            ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9", "Custom Size"],
             help="Choose the aspect ratio of the generated image"
         )
+        
+        if image_size_option == "Custom Size":
+            custom_width = st.number_input(
+                "Enter image width (pixels):",
+                min_value=1,
+                max_value=4096,
+                value=512,
+                step=1,
+                help="Specify the width of the generated image in pixels."
+            )
+            custom_height = st.number_input(
+                "Enter image height (pixels):",
+                min_value=1,
+                max_value=4096,
+                value=512,
+                step=1,
+                help="Specify the height of the generated image in pixels."
+            )
+            image_size = {"width": custom_width, "height": custom_height}
+        else:
+            # Predefined image sizes mapping
+            predefined_sizes = {
+                "square_hd": {"width": 1080, "height": 1080},
+                "square": {"width": 512, "height": 512},
+                "portrait_4_3": {"width": 800, "height": 600},
+                "portrait_16_9": {"width": 1280, "height": 720},
+                "landscape_4_3": {"width": 600, "height": 800},
+                "landscape_16_9": {"width": 720, "height": 1280}
+            }
+            image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
+
         num_inference_steps = st.slider(
             "Inference steps:",
             min_value=1,
             max_value=50,
-            value=40,
+            value=32,
             step=1,
             help="More steps generally result in better quality but take longer"
         )
@@ -218,46 +263,47 @@ if api_key:
             "Guidance scale:",
             min_value=1.0,
             max_value=20.0,
-            value=9.0,
-            step=0.5,
+            value=1.5,
+            step=0.1,
             help="How closely the image should follow the prompt. Higher values stick closer to the prompt"
         )
         num_images = st.number_input(
             "Number of images:",
             min_value=1,
             max_value=10,
-            value=1,
+            value=2,
             help="Number of images to generate in one go"
         )
-        safety_tolerance = st.selectbox(
-            "Safety tolerance:",
-            ["1", "2", "3", "4", "5", "6"],
-            index=5,
-            help="6 is the most permissive, 1 is the most restrictive"
-        )
+        
+        # Safety tolerance only for Text-to-Image
+        if generation_mode == "Text-to-Image":
+            safety_tolerance = st.selectbox(
+                "Safety tolerance:",
+                ["1", "2", "3", "4", "5", "6"],
+                index=5,
+                help="6 is the most permissive, 1 is the most restrictive"
+            )
+        else:
+            safety_tolerance = None  # Not applicable
+
         enable_safety_checker = st.checkbox(
             "Enable safety checker",
-            value=False,
+            value=True,
             help="If unchecked, the safety checker will be disabled"
         )
 
-        # Additional inputs for Image-to-Image
-        if generation_mode == "Image-to-Image":
-            strength = st.slider(
-                "Strength:",
-                min_value=0.0,
-                max_value=1.0,
-                value=0.95,
-                step=0.05,
-                help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
-            )
-
-        # Seed input (common for both modes)
-        seed_input = st.text_input("Seed (optional):", help="Enter an integer for reproducible generation. Leave empty for random results.")
-
     # Generate button
     if st.button("Generate Image"):
-        if api_key and prompt and (generation_mode == "Text-to-Image" or (generation_mode == "Image-to-Image" and image_data_uri)):
+        # Validation
+        if not api_key:
+            st.error("Please enter your API key.")
+        elif not prompt:
+            st.error("Please enter a prompt.")
+        elif generation_mode == "Image-to-Image" and not image_data_uri:
+            st.error("Please upload an image for Image-to-Image generation.")
+        elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
+            st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
+        else:
             try:
                 # Convert seed to integer if provided, otherwise pass None
                 seed_value = None
@@ -268,16 +314,6 @@ if api_key:
                         st.error("Seed must be an integer.")
                         st.stop()
 
-                # Validate LoRA inputs for Image-to-Image
-                lora_path = None
-                lora_scale = None
-                if generation_mode == "Image-to-Image":
-                    if not lora_path_input:
-                        st.error("Please enter a LoRA path for Image-to-Image generation.")
-                        st.stop()
-                    lora_path = lora_path_input
-                    lora_scale = lora_scale_input
-
                 # Call generate_image with appropriate parameters
                 result = generate_image(
                     model=model,
@@ -286,13 +322,13 @@ if api_key:
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
                     num_images=num_images,
-                    safety_tolerance=safety_tolerance,
+                    safety_tolerance=safety_tolerance if generation_mode == "Text-to-Image" else None,
                     enable_safety_checker=enable_safety_checker,
                     seed=seed_value,
                     image_base64=image_data_uri if generation_mode == "Image-to-Image" else None,
                     strength=strength if generation_mode == "Image-to-Image" else None,
-                    lora_path=lora_path if generation_mode == "Image-to-Image" else None,
-                    lora_scale=lora_scale if generation_mode == "Image-to-Image" else None
+                    lora_path=lora_path_input if generation_mode == "Image-to-Image" else None,
+                    lora_scale=lora_scale_input if generation_mode == "Image-to-Image" else None
                 )
                 
                 # Display seed information
@@ -341,14 +377,7 @@ if api_key:
                 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-        else:
-            if not api_key:
-                st.error("Please enter your API key.")
-            if not prompt:
-                st.error("Please enter a prompt.")
-            if generation_mode == "Image-to-Image" and not image_data_uri:
-                st.error("Please upload an image for Image-to-Image generation.")
-    
+
     # Display current generation
     if st.session_state.current_generation:
         st.header("Current Generation")
