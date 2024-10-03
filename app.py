@@ -206,7 +206,7 @@ if api_key:
     with st.sidebar.expander("Advanced Settings", expanded=False):
         if generation_mode == "Text-to-Image":
             model_options = [
-                "fal-ai/flux-pro",
+                "fal-ai/flux-pro/v1.1",
                 "fal-ai/flux/dev",
                 "fal-ai/flux-realism"
             ]
