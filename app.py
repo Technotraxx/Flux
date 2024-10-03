@@ -102,7 +102,7 @@ if api_key:
         # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
-
+    
         # Prepare the request payload
         payload = {
             "prompt": prompt,
@@ -110,11 +110,11 @@ if api_key:
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
-
+    
         # Add safety_tolerance only for Text-to-Image models
-        if model != "fal-ai/flux-general/image-to-image":
+        if generation_mode == "Text-to-Image" and model != "fal-ai/flux-general/image-to-image":
             payload["safety_tolerance"] = safety_tolerance
-
+    
         # Add seed to payload if provided
         if seed:
             payload["seed"] = int(seed)
@@ -139,6 +139,9 @@ if api_key:
             payload["num_inference_steps"] = num_inference_steps
             payload["guidance_scale"] = guidance_scale
 
+        # Debug: Show payload
+        # st.write("Payload:", payload)
+    
         # Submit the request
         handler = fal_client.submit(model, payload)
         
@@ -199,39 +202,34 @@ if api_key:
         if image:
             st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
             st.write(f"**Image Size:** {image_size_info}")
-        
-        # LoRA path input
-        lora_path_input = st.text_input(
-            "Enter LoRA Path:",
-            help="Provide the URL or file path to the LoRA weights."
-        )
-
-        # LoRA scale input
-        lora_scale_input = st.number_input(
-            "Enter LoRA Scale:",
-            min_value=0.1,
-            max_value=5.0,
-            value=1.0,
-            step=0.1,
-            help="Specify the scale for the LoRA weights."
-        )
-
-        # Strength control moved to main frame
-        strength = st.slider(
-            "Strength:",
-            min_value=0.00,
-            max_value=1.00,
-            value=0.95,
-            step=0.05,
-            help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
-        )
     else:
         image = None
         image_data_uri = None
         image_size_info = None
-        strength = None
-        lora_path_input = None
-        lora_scale_input = None
+
+    # Sidebar: LoRA Configuration
+    with st.sidebar.expander("LoRA Configuration", expanded=True):
+        if generation_mode == "Image-to-Image":
+            # LoRA Path input with default value
+            lora_path_input = st.text_input(
+                "Enter LoRA Path:",
+                value="https://storage.googleapis.com/fal-flux-lora/c542290a367b48f9a1350dd3e4788077_pytorch_lora_weights.safetensors",
+                help="Provide the URL or file path to the LoRA weights."
+            )
+
+            # LoRA Scale input
+            lora_scale_input = st.number_input(
+                "Enter LoRA Scale:",
+                min_value=0.1,
+                max_value=5.0,
+                value=1.0,
+                step=0.1,
+                help="Specify the scale for the LoRA weights."
+            )
+        else:
+            # If not Image-to-Image, LoRA configuration is not needed
+            lora_path_input = None
+            lora_scale_input = None
 
     # Sidebar: Advanced Settings
     with st.sidebar.expander("Advanced Settings", expanded=False):
@@ -305,33 +303,36 @@ if api_key:
 
         # Determine maximum number of images based on the selected model
         if generation_mode == "Text-to-Image":
-            # Assuming all Text-to-Image models allow up to 4 images for dev and 1 for others
-            if model == "fal-ai/flux/dev":
+            # Pro Models allow only 1 image; Dev Model allows up to 4 images
+            if model in ["fal-ai/flux-pro/v1.1", "fal-ai/flux-pro", "fal-ai/flux-realism"]:
+                max_num_images = 1
+            elif model == "fal-ai/flux/dev":
                 max_num_images = 4
             else:
-                max_num_images = 1
+                max_num_images = 1  # Default to 1 if model is unrecognized
         else:
-            # Image-to-Image mode: All models allow only 1 image
-            max_num_images = 1
+            # Image-to-Image mode: Pro Models allow only 1 image; Dev Model allows up to 4 images
+            if model in ["fal-ai/flux-pro/v1.1", "fal-ai/flux-pro", "fal-ai/flux-realism"]:
+                max_num_images = 1
+            elif model == "fal-ai/flux/dev":
+                max_num_images = 4
+            else:
+                max_num_images = 1  # Default to 1 if model is unrecognized
 
         # Number of images input
-        if generation_mode == "Text-to-Image":
-            if model == "fal-ai/flux/dev":
+        if generation_mode == "Text-to-Image" or generation_mode == "Image-to-Image":
+            if max_num_images > 1:
                 num_images = st.number_input(
                     "Number of Images:",
                     min_value=1,
-                    max_value=4,
+                    max_value=max_num_images,
                     value=2,
                     step=1,
-                    help="Number of images to generate in one go (up to 4 for dev model)."
+                    help=f"Number of images to generate in one go (up to {max_num_images} for selected model)."
                 )
             else:
                 st.write("**Number of Images:** 1 (fixed)")
                 num_images = 1
-        else:
-            # Image-to-Image mode: fixed to 1
-            st.write("**Number of Images:** 1 (fixed)")
-            num_images = 1
 
         num_inference_steps = st.slider(
             "Inference Steps:",
@@ -407,7 +408,7 @@ if api_key:
                     enable_safety_checker=enable_safety_checker,
                     seed=seed_value,
                     image_base64=st.session_state.image_data_uri if generation_mode == "Image-to-Image" else None,
-                    strength=strength if generation_mode == "Image-to-Image" else None,
+                    strength=None,  # Strength is not used anymore as per latest requirements
                     lora_path=lora_path_input if generation_mode == "Image-to-Image" else None,
                     lora_scale=lora_scale_input if generation_mode == "Image-to-Image" else None
                 )
@@ -450,7 +451,7 @@ if api_key:
                         'image': img,
                         'prompt': result.get('prompt', prompt),
                         'content_type': content_type,
-                        'has_nsfw_concepts': result.get('has_nsfw_concepts', [False])[idx],
+                        'has_nsfw_concepts': result.get('has_nsfw_concepts', [False])[idx] if 'has_nsfw_concepts' in result else False,
                         'filename': filename,
                         'seed': used_seed,
                         'generation_time': generation_time,
