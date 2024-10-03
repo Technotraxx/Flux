@@ -435,6 +435,10 @@ if api_key:
                         continue
 
                     img = Image.open(BytesIO(response.content)).convert("RGB")
+                    
+                    # Get image size
+                    width, height = img.size
+                    image_size_generated = f"Width: {width}px, Height: {height}px"
 
                     # Generate filename
                     generation_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -456,7 +460,8 @@ if api_key:
                         'seed': used_seed,
                         'generation_time': generation_time,
                         'enable_safety_checker': enable_safety_checker,
-                        'model': model
+                        'model': model,
+                        'image_size': image_size_generated  # Added image size
                     })
                     
                     # Add to history
@@ -502,8 +507,9 @@ if api_key:
                  # Display additional info
                 st.subheader(f"**Image {idx+1} Info:**")
                 st.write(f"**Seed:** {item['seed']}")
-                st.write(f"Content Type: {item['content_type']}")
-                st.write(f"NSFW Content: {'Yes' if item['has_nsfw_concepts'] else 'No'}")
+                st.write(f"**Content Type:** {item['content_type']}")
+                st.write(f"**Image Size:** {item.get('image_size', 'N/A')}")
+                st.write(f"**NSFW Content:** {'Yes' if item['has_nsfw_concepts'] else 'No'}")
 
     # History display
     if st.session_state.history:
@@ -524,6 +530,7 @@ if api_key:
                     else:
                         st.write("**Generated at:** Not available")
                     st.write("**Safety Checker:**", "Enabled" if item.get('enable_safety_checker', True) else "Disabled")
+                    st.write("**Image Size:**", item.get('image_size', 'N/A'))  # Added image size
                     if 'download' not in item:
                         # Create a download button for the image
                         img_byte_arr = BytesIO()
