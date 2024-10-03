@@ -50,6 +50,13 @@ st.markdown("""
 # Sidebar: Generation Parameters
 st.sidebar.title("Generation Parameters")
 
+# Select Generation Mode in the sidebar
+generation_mode = st.sidebar.radio(
+    "Select Generation Mode:",
+    ("Text-to-Image", "Image-to-Image"),
+    horizontal=True
+)
+
 # API key input in sidebar
 api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
 
@@ -141,13 +148,7 @@ if api_key:
         
         return result
 
-    # Main Area: Generation Modes
-    generation_mode = st.radio(
-        "Select Generation Mode:",
-        ("Text-to-Image", "Image-to-Image"),
-        horizontal=True
-    )
-
+    # Main Area: Prompt Input and Image Upload
     # Prompt input (used in both modes)
     prompt = st.text_area("Enter your prompt:", help="Describe the image you want to generate")
 
@@ -191,9 +192,9 @@ if api_key:
                 image_data_uri = None
                 image_size_info = None
 
-        # Display uploaded image size
+        # Display uploaded image with reduced size
         if image:
-            st.image(image, caption="Uploaded Image", use_column_width=True)
+            st.image(image, caption="Uploaded Image", width=300)  # Reduced width for preview
             st.write(f"**Image Size:** {image_size_info}")
         
         # LoRA path input
@@ -292,12 +293,42 @@ if api_key:
             predefined_sizes = {
                 "square_hd": {"width": 1080, "height": 1080},
                 "square": {"width": 512, "height": 512},
-                "portrait_4_3": {"width": 800, "height": 600},
-                "portrait_16_9": {"width": 1280, "height": 720},
-                "landscape_4_3": {"width": 600, "height": 800},
-                "landscape_16_9": {"width": 720, "height": 1280}
+                "portrait_4_3": {"width": 768, "height": 1024},
+                "portrait_16_9": {"width": 576, "height": 1280},
+                "landscape_4_3": {"width": 1024, "height": 768},
+                "landscape_16_9": {"width": 1280, "height": 576}
             }
             image_size = predefined_sizes.get(image_size_option, {"width": 512, "height": 512})
+
+        # Determine maximum number of images based on the selected model
+        if generation_mode == "Text-to-Image":
+            # Assuming all Text-to-Image models allow up to 4 images for dev and 1 for others
+            if model == "fal-ai/flux/dev":
+                max_num_images = 4
+            else:
+                max_num_images = 1
+        else:
+            # Image-to-Image mode: All models allow only 1 image
+            max_num_images = 1
+
+        # Number of images input
+        if generation_mode == "Text-to-Image":
+            if model == "fal-ai/flux/dev":
+                num_images = st.number_input(
+                    "Number of Images:",
+                    min_value=1,
+                    max_value=4,
+                    value=2,
+                    step=1,
+                    help="Number of images to generate in one go (up to 4 for dev model)."
+                )
+            else:
+                st.write("**Number of Images:** 1 (fixed)")
+                num_images = 1
+        else:
+            # Image-to-Image mode: fixed to 1
+            st.write("**Number of Images:** 1 (fixed)")
+            num_images = 1
 
         num_inference_steps = st.slider(
             "Inference Steps:",
@@ -314,13 +345,6 @@ if api_key:
             value=1.5,
             step=0.1,
             help="How closely the image should follow the prompt. Higher values stick closer to the prompt."
-        )
-        num_images = st.number_input(
-            "Number of Images:",
-            min_value=1,
-            max_value=10,
-            value=2,
-            help="Number of images to generate in one go."
         )
         
         # Safety tolerance only for Text-to-Image
