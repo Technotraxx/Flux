@@ -238,7 +238,7 @@ if api_key:
             # LoRA Path input with default value
             lora_path_input = st.text_input(
                 "Enter LoRA Path:",
-                value="",
+                value="https://storage.googleapis.com/fal-flux-lora/c542290a367b48f9a1350dd3e4788077_pytorch_lora_weights.safetensors",
                 help="Provide the URL or file path to the LoRA weights."
             )
 
