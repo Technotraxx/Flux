@@ -129,8 +129,8 @@ if api_key:
         if lora_path and lora_scale:
             payload["loras"] = [
                 {
-                    "path": lora_path,
-                    "scale": float(lora_scale)
+                    "path": _path,
+                    "scale": float(_scale)
                 }
             ]
         
@@ -216,7 +216,7 @@ if api_key:
                 "Strength:",
                 min_value=0.00,
                 max_value=1.00,
-                value=0.95,
+                value=0.75,
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
@@ -238,7 +238,7 @@ if api_key:
             # LoRA Path input with default value
             lora_path_input = st.text_input(
                 "Enter LoRA Path:",
-                value="https://storage.googleapis.com/fal-flux-lora/c542290a367b48f9a1350dd3e4788077_pytorch_lora_weights.safetensors",
+                value="",
                 help="Provide the URL or file path to the LoRA weights."
             )
 
