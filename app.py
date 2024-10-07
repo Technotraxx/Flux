@@ -570,4 +570,4 @@ if api_key:
             st.session_state.history = []
             st.experimental_rerun()
 else:
-    st.warning("Please enter your FAL API Key in the sidebar to start generating images."
+    st.warning("Please enter your FAL API Key in the sidebar to start generating images.")
