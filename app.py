@@ -129,8 +129,8 @@ if api_key:
         if lora_path and lora_scale:
             payload["loras"] = [
                 {
-                    "path": _path,
-                    "scale": float(_scale)
+                    "path": lora_path,
+                    "scale": float(lora_scale)
                 }
             ]
         
@@ -216,7 +216,7 @@ if api_key:
                 "Strength:",
                 min_value=0.00,
                 max_value=1.00,
-                value=0.75,
+                value=0.95,
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
@@ -570,4 +570,4 @@ if api_key:
             st.session_state.history = []
             st.experimental_rerun()
 else:
-    st.warning("Please enter your FAL API Key in the sidebar to start generating images.")
+    st.warning("Please enter your FAL API Key in the sidebar to start generating images."
