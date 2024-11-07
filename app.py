@@ -259,6 +259,7 @@ if api_key:
             lora_path_input = st.text_input(
                 "Enter LoRA Path:",
                 value=st.session_state.lora_path,  # Use session state value
+                type="password",
                 help="Provide the URL or file path to the LoRA weights.",
                 key="lora_path_input"  # Add a key to track changes
             )
