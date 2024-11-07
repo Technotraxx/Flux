@@ -72,6 +72,9 @@ if 'uploaded_image' not in st.session_state:
     st.session_state.image_data_uri = None
     st.session_state.image_size_info = None
 
+if 'lora_path' not in st.session_state:
+    st.session_state.lora_path = "https://storage.googleapis.com/fal-flux-lora/"
+
 # After your imports, before any functions or app code
 ULTRA_SIZE_MAP = {
     "square_hd": "1:1",
@@ -245,27 +248,30 @@ if api_key:
 
     # Sidebar: LoRA Configuration
     with st.sidebar.expander("LoRA Configuration", expanded=True):
-        if generation_mode == "Image-to-Image":
-            # LoRA Path input with default value
-            lora_path_input = st.text_input(
-                "Enter LoRA Path:",
-                value="https://storage.googleapis.com/fal-flux-lora/",
-                help="Provide the URL or file path to the LoRA weights."
-            )
+    if generation_mode == "Image-to-Image":
+        # LoRA Path input with session state value as default
+        lora_path_input = st.text_input(
+            "Enter LoRA Path:",
+            value=st.session_state.lora_path,  # Use session state value
+            help="Provide the URL or file path to the LoRA weights.",
+            key="lora_path_input"  # Add a key to track changes
+        )
+        # Update session state when value changes
+        st.session_state.lora_path = lora_path_input
 
-            # LoRA Scale input
-            lora_scale_input = st.number_input(
-                "Enter LoRA Scale:",
-                min_value=0.1,
-                max_value=5.0,
-                value=1.0,
-                step=0.1,
-                help="Specify the scale for the LoRA weights."
-            )
-        else:
-            # If not Image-to-Image, LoRA configuration is not needed
-            lora_path_input = None
-            lora_scale_input = None
+        # LoRA Scale input (unchanged)
+        lora_scale_input = st.number_input(
+            "Enter LoRA Scale:",
+            min_value=0.1,
+            max_value=5.0,
+            value=1.0,
+            step=0.1,
+            help="Specify the scale for the LoRA weights."
+        )
+    else:
+        # If not Image-to-Image, LoRA configuration is not needed
+        lora_path_input = None
+        lora_scale_input = None
 
     # Sidebar: Advanced Settings
     with st.sidebar.expander("Advanced Settings", expanded=False):
