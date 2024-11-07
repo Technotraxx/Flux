@@ -267,7 +267,8 @@ if api_key:
                 "fal-ai/flux-pro/v1.1",  # New Model Integrated
                 "fal-ai/flux-pro",
                 "fal-ai/flux/dev",
-                "fal-ai/flux-realism"
+                "fal-ai/flux-realism",
+                "fal-ai/flux-pro/v1.1-ultra"
             ]
             model = st.selectbox(
                 "Choose AI Model:",
@@ -322,7 +323,7 @@ if api_key:
         # Determine maximum number of images based on the selected model
         if generation_mode == "Text-to-Image":
             # Pro Models allow only 1 image; Dev Model allows up to 4 images
-            if model in ["fal-ai/flux-pro/v1.1", "fal-ai/flux-pro", "fal-ai/flux-realism"]:
+            if model in ["fal-ai/flux-pro/v1.1", "fal-ai/flux-pro", "fal-ai/flux-realism", "fal-ai/flux-pro/v1.1-ultra"]:
                 max_num_images = 1
             elif model == "fal-ai/flux/dev":
                 max_num_images = 4
