@@ -424,9 +424,7 @@ if api_key:
                 if model == "fal-ai/flux-pro/v1.1-ultra":
                     payload_image_size = {"aspect_ratio": ULTRA_SIZE_MAP[image_size]}
                 else:
-                    payload_image_size = image_size
-                else:
-                    # For Image-to-Image, image_size can be dict or enum string
+                # For Image-to-Image, image_size can be dict or enum string
                     payload_image_size = image_size
 
                 # Call generate_image with appropriate parameters
