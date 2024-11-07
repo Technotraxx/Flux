@@ -72,15 +72,15 @@ if 'uploaded_image' not in st.session_state:
     st.session_state.image_data_uri = None
     st.session_state.image_size_info = None
 
-# Add this mapping at the top with other constants
-            ULTRA_SIZE_MAP = {
-                "square_hd": "1:1",
-                "square": "1:1",
-                "portrait_4_3": "3:4",
-                "portrait_16_9": "9:16",
-                "landscape_4_3": "4:3",
-                "landscape_16_9": "16:9"
-            }
+# After your imports, before any functions or app code
+ULTRA_SIZE_MAP = {
+    "square_hd": "1:1",
+    "square": "1:1",
+    "portrait_4_3": "3:4",
+    "portrait_16_9": "9:16",
+    "landscape_4_3": "4:3",
+    "landscape_16_9": "16:9"
+}
 
 # Import fal_client only if API key is provided
 if api_key:
