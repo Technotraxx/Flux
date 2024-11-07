@@ -73,7 +73,7 @@ if 'uploaded_image' not in st.session_state:
     st.session_state.image_size_info = None
 
 if 'lora_path' not in st.session_state:
-    st.session_state.lora_path = "https://storage.googleapis.com/fal-flux-lora/"
+    st.session_state.lora_path = "/fal-flux-lora/"
 
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = "fal-ai/flux-pro/v1.1"  # Default model
