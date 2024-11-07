@@ -216,7 +216,7 @@ if api_key:
                 "Strength:",
                 min_value=0.00,
                 max_value=1.00,
-                value=0.95,
+                value=0.50,
                 step=0.05,
                 help="Strength to use for image modification. 1.0 completely remakes the image while 0.0 preserves the original."
             )
