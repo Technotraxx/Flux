@@ -72,6 +72,16 @@ if 'uploaded_image' not in st.session_state:
     st.session_state.image_data_uri = None
     st.session_state.image_size_info = None
 
+# Add this mapping at the top with other constants
+            ULTRA_SIZE_MAP = {
+                "square_hd": "1:1",
+                "square": "1:1",
+                "portrait_4_3": "3:4",
+                "portrait_16_9": "9:16",
+                "landscape_4_3": "4:3",
+                "landscape_16_9": "16:9"
+            }
+
 # Import fal_client only if API key is provided
 if api_key:
     set_api_key(api_key)
@@ -297,17 +307,7 @@ if api_key:
                 "landscape_4_3": {"width": 1024, "height": 768},
                 "landscape_16_9": {"width": 1024, "height": 512}
             }
-
-            # Add this mapping at the top with other constants
-            ULTRA_SIZE_MAP = {
-                "square_hd": "1:1",
-                "square": "1:1",
-                "portrait_4_3": "3:4",
-                "portrait_16_9": "9:16",
-                "landscape_4_3": "4:3",
-                "landscape_16_9": "16:9"
-            }
-
+           
             # Image size selection
             size_option = st.selectbox(
                 "Image Size Option:",
