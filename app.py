@@ -298,6 +298,16 @@ if api_key:
                 "landscape_16_9": {"width": 1024, "height": 512}
             }
 
+            # Add this mapping at the top with other constants
+            ULTRA_SIZE_MAP = {
+                "square_hd": "1:1",
+                "square": "1:1",
+                "portrait_4_3": "3:4",
+                "portrait_16_9": "9:16",
+                "landscape_4_3": "4:3",
+                "landscape_16_9": "16:9"
+            }
+
             # Image size selection
             size_option = st.selectbox(
                 "Image Size Option:",
@@ -411,8 +421,9 @@ if api_key:
                         st.stop()
 
                 # For Text-to-Image, image_size should be a string from enum
-                if generation_mode == "Text-to-Image":
-                    # image_size is already selected as enum string
+                if model == "fal-ai/flux-pro/v1.1-ultra":
+                    payload_image_size = {"aspect_ratio": ULTRA_SIZE_MAP[image_size]}
+                else:
                     payload_image_size = image_size
                 else:
                     # For Image-to-Image, image_size can be dict or enum string
