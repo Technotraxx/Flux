@@ -410,28 +410,38 @@ if api_key:
         elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
             st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
         else:
-            try:
-                # Convert seed to integer if provided, otherwise pass None
-                seed_value = None
-                if seed_input:
-                    try:
-                        seed_value = int(seed_input)
-                    except ValueError:
-                        st.error("Seed must be an integer.")
-                        st.stop()
-
-                # For Text-to-Image, image_size should be a string from enum
-                if model == "fal-ai/flux-pro/v1.1-ultra":
-                    payload_image_size = {"aspect_ratio": ULTRA_SIZE_MAP[image_size]}
-                else:
-                # For Image-to-Image, image_size can be dict or enum string
-                    payload_image_size = image_size
-
-                # Call generate_image with appropriate parameters
+            # In your generate button click handler, where you prepare the payload:
+        try:
+            # Convert seed to integer if provided, otherwise pass None
+            seed_value = None
+            if seed_input:
+                try:
+                    seed_value = int(seed_input)
+                except ValueError:
+                    st.error("Seed must be an integer.")
+                    st.stop()
+        
+            # For Text-to-Image, handle the ultra model differently
+            if generation_mode == "Text-to-Image" and model == "fal-ai/flux-pro/v1.1-ultra":
+                # Convert the selected image_size to the ultra model format
+                aspect_ratio = ULTRA_SIZE_MAP[image_size]
                 result = generate_image(
                     model=model,
                     prompt=prompt,
-                    image_size=payload_image_size,
+                    image_size={"aspect_ratio": aspect_ratio},
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    num_images=num_images,
+                    safety_tolerance=safety_tolerance,
+                    enable_safety_checker=enable_safety_checker,
+                    seed=seed_value
+                )
+            else:
+                # Original code for other models
+                result = generate_image(
+                    model=model,
+                    prompt=prompt,
+                    image_size=image_size,
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
                     num_images=num_images,
@@ -443,7 +453,7 @@ if api_key:
                     lora_path=lora_path_input if generation_mode == "Image-to-Image" else None,
                     lora_scale=lora_scale_input if generation_mode == "Image-to-Image" else None
                 )
-                
+                        
                 # Display seed information
                 used_seed = result.get('seed')
                 if used_seed is not None:
