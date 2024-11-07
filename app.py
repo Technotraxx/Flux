@@ -93,82 +93,83 @@ if api_key:
 
     # Function to generate image
     def generate_image(
-        model,
-        prompt,
-        image_size,
-        num_inference_steps,
-        guidance_scale,
-        num_images,
-        safety_tolerance,
-        enable_safety_checker,
-        seed=None,
-        image_base64=None,
-        strength=None,
-        lora_path=None,
-        lora_scale=None
-    ):
-        start_time = time.time()
-        
-        # Placeholder for status messages
-        status_placeholder = st.empty()
-        status_placeholder.info(f"Generating image using {model}...")
+    model,
+    prompt,
+    image_size,
+    num_inference_steps,
+    guidance_scale,
+    num_images,
+    safety_tolerance,
+    enable_safety_checker,
+    seed=None,
+    image_base64=None,
+    strength=None,
+    lora_path=None,
+    lora_scale=None
+):
+    start_time = time.time()
+    
+    # Placeholder for status messages
+    status_placeholder = st.empty()
+    status_placeholder.info(f"Generating image using {model}...")
 
-        # Prepare the request payload
-        payload = {
-            "prompt": prompt,
-            "image_size": image_size,
-            "num_images": num_images,
-            "enable_safety_checker": enable_safety_checker
-        }
+    # Prepare the request payload
+    payload = {
+        "prompt": prompt,
+        "num_images": num_images,
+        "enable_safety_checker": enable_safety_checker
+    }
 
-        # Add safety_tolerance only for Text-to-Image models
-        if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
-            payload["safety_tolerance"] = safety_tolerance
+    # Add safety_tolerance only for Text-to-Image models
+    if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
+        payload["safety_tolerance"] = safety_tolerance
 
-        # Add seed to payload if provided
-        if seed:
-            payload["seed"] = int(seed)
-        
-        # Add image_base64 and strength if provided (for Image-to-Image)
-        if image_base64:
-            payload["image_url"] = image_base64  # Using image_url field to send Base64 data URI
-            if strength is not None:
-                payload["strength"] = float(strength)
-        
-        # Add LoRA if provided
-        if lora_path and lora_scale:
-            payload["loras"] = [
-                {
-                    "path": lora_path,
-                    "scale": float(lora_scale)
-                }
-            ]
-        
-        # Conditionally add inference_steps and guidance_scale
-        # For Text-to-Image models, these are always sent
-        if generation_mode == "Text-to-Image":
+    # Add seed to payload if provided
+    if seed:
+        payload["seed"] = int(seed)
+    
+    # Add image_base64 and strength if provided (for Image-to-Image)
+    if image_base64:
+        payload["image_url"] = image_base64
+        if strength is not None:
+            payload["strength"] = float(strength)
+    
+    # Add LoRA if provided
+    if lora_path and lora_scale:
+        payload["loras"] = [
+            {
+                "path": lora_path,
+                "scale": float(lora_scale)
+            }
+        ]
+    
+    # Special handling for ultra model
+    if model == "fal-ai/flux-pro/v1.1-ultra":
+        payload["aspect_ratio"] = image_size["aspect_ratio"]  # Add aspect_ratio at top level
+    else:
+        payload["image_size"] = image_size  # Use image_size for other models
+
+    # Conditionally add inference_steps and guidance_scale
+    if generation_mode == "Text-to-Image":
+        payload["num_inference_steps"] = num_inference_steps
+        payload["guidance_scale"] = guidance_scale
+    else:
+        # For Image-to-Image, exclude these if using a specific model version
+        if model != "fal-ai/flux-pro/v1.1":
             payload["num_inference_steps"] = num_inference_steps
             payload["guidance_scale"] = guidance_scale
-        else:
-            # For Image-to-Image, exclude these if using a specific model version
-            if model != "fal-ai/flux-pro/v1.1":
-                payload["num_inference_steps"] = num_inference_steps
-                payload["guidance_scale"] = guidance_scale
 
-        # Debug: Show payload (optional)
-        # st.write("Payload:", payload)
-
-        # Submit the request
-        handler = fal_client.submit(model, payload)
-        
-        # Wait for the result
-        result = handler.get()
-        
-        # Calculate total time
-        total_time = time.time() - start_time
-        status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
-        
-        return result
+    # Submit the request
+    handler = fal_client.submit(model, payload)
+    
+    # Wait for the result
+    result = handler.get()
+    
+    # Calculate total time
+    total_time = time.time() - start_time
+    status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
+    
+    return result
 
     # Main Area: Prompt Input and Image Upload
     # Prompt input (used in both modes)
