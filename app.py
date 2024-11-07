@@ -58,7 +58,7 @@ generation_mode = st.sidebar.radio(
 )
 
 # API key input in sidebar
-api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password")
+api_key = st.sidebar.text_input("Enter your FAL API Key:", type="password", autocomplete="api-key")
 
 # Initialize session state for history, current generation, and uploaded image
 if 'history' not in st.session_state:
@@ -260,6 +260,7 @@ if api_key:
                 "Enter LoRA Path:",
                 value=st.session_state.lora_path,  # Use session state value
                 type="password",
+                autocomplete="off",
                 help="Provide the URL or file path to the LoRA weights.",
                 key="lora_path_input"  # Add a key to track changes
             )
