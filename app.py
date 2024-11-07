@@ -105,7 +105,8 @@ if api_key:
         image_base64=None,
         strength=None,
         lora_path=None,
-        lora_scale=None
+        lora_scale=None,
+        raw_output=False  # Add this parameter with default False
     ):
         start_time = time.time()
         
@@ -436,6 +437,10 @@ if api_key:
                         st.error("Seed must be an integer.")
                         st.stop()
             
+                
+                # Get raw_output value, default to False if not defined
+                raw_output_value = raw_output if model == "fal-ai/flux-pro/v1.1-ultra" else False
+
                 # For Text-to-Image, handle the ultra model differently
                 if generation_mode == "Text-to-Image" and model == "fal-ai/flux-pro/v1.1-ultra":
                     # Convert the selected image_size to the ultra model format
@@ -449,7 +454,8 @@ if api_key:
                         num_images=num_images,
                         safety_tolerance=safety_tolerance,
                         enable_safety_checker=enable_safety_checker,
-                        seed=seed_value
+                        seed=seed_value,
+                        raw_output=raw_output_value  # Add this line
                     )
                 else:
                     # Original code for other models
