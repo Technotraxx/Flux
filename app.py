@@ -390,7 +390,7 @@ if api_key:
             "Guidance Scale:",
             min_value=1.0,
             max_value=20.0,
-            value=1.5,
+            value=2.5,
             step=0.1,
             help="How closely the image should follow the prompt. Higher values stick closer to the prompt."
         )
