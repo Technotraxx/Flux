@@ -106,7 +106,7 @@ if api_key:
     strength=None,
     lora_path=None,
     lora_scale=None
-):
+    ):
     start_time = time.time()
     
     # Placeholder for status messages
