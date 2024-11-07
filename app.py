@@ -105,8 +105,7 @@ if api_key:
         image_base64=None,
         strength=None,
         lora_path=None,
-        lora_scale=None,
-        raw_output=False  # Add this parameter with default False
+        lora_scale=None
     ):
         start_time = time.time()
         
@@ -122,13 +121,6 @@ if api_key:
             "enable_safety_checker": enable_safety_checker
         }
 
-        # Special handling for ultra model
-        if model == "fal-ai/flux-pro/v1.1-ultra":
-            payload["aspect_ratio"] = ULTRA_SIZE_MAP[image_size]
-            payload["raw"] = raw_output  # Add raw parameter only for ultra model
-        else:
-            payload["image_size"] = image_size
-        
         # Add safety_tolerance only for Text-to-Image models
         if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
             payload["safety_tolerance"] = safety_tolerance
@@ -294,19 +286,11 @@ if api_key:
                 help="Select the AI model for image generation"
             )
 
-            # Add raw option only for ultra model
-            if model == "fal-ai/flux-pro/v1.1-ultra":
-                raw_output = st.checkbox(
-                    "Raw Output",
-                    value=False,
-                    help="Generate less processed, more natural-looking images"
-                )
-            
             # Image size selection restricted to enum values
             image_size = st.selectbox(
                 "Image Size:",
                 image_size_options,
-                index=image_size_options.index("portrait_4_3"),
+                index=image_size_options.index("landscape_4_3"),
                 help="Choose the size of the generated image."
             )
         else:
@@ -437,10 +421,6 @@ if api_key:
                         st.error("Seed must be an integer.")
                         st.stop()
             
-                
-                # Get raw_output value, default to False if not defined
-                raw_output_value = raw_output if model == "fal-ai/flux-pro/v1.1-ultra" else False
-
                 # For Text-to-Image, handle the ultra model differently
                 if generation_mode == "Text-to-Image" and model == "fal-ai/flux-pro/v1.1-ultra":
                     # Convert the selected image_size to the ultra model format
@@ -454,8 +434,7 @@ if api_key:
                         num_images=num_images,
                         safety_tolerance=safety_tolerance,
                         enable_safety_checker=enable_safety_checker,
-                        seed=seed_value,
-                        raw_output=raw_output_value  # Add this line
+                        seed=seed_value
                     )
                 else:
                     # Original code for other models
