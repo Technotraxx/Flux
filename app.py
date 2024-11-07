@@ -75,6 +75,12 @@ if 'uploaded_image' not in st.session_state:
 if 'lora_path' not in st.session_state:
     st.session_state.lora_path = "https://storage.googleapis.com/fal-flux-lora/"
 
+if 'selected_model' not in st.session_state:
+    st.session_state.selected_model = "fal-ai/flux-pro/v1.1"  # Default model
+
+if 'selected_image_size' not in st.session_state:
+    st.session_state.selected_image_size = "landscape_4_3"  # Default size
+
 # After your imports, before any functions or app code
 ULTRA_SIZE_MAP = {
     "square_hd": "1:1",
@@ -277,11 +283,11 @@ if api_key:
     with st.sidebar.expander("Advanced Settings", expanded=False):
         # Predefined enum values for image_size
         image_size_options = ["square_hd", "square", "portrait_4_3", "portrait_16_9", "landscape_4_3", "landscape_16_9"]
-
+    
         if generation_mode == "Text-to-Image":
-            # List of public models, including the new model pro1.1
+            # List of public models
             model_options = [
-                "fal-ai/flux-pro/v1.1",  # New Model Integrated
+                "fal-ai/flux-pro/v1.1",
                 "fal-ai/flux-pro/v1.1-ultra",
                 "fal-ai/flux/dev",
                 "fal-ai/flux-realism",
@@ -290,22 +296,29 @@ if api_key:
             model = st.selectbox(
                 "Choose AI Model:",
                 model_options,
-                help="Select the AI model for image generation"
+                index=model_options.index(st.session_state.selected_model),  # Use session state for default
+                help="Select the AI model for image generation",
+                key="model_selectbox"
             )
-
+            # Update session state when model changes
+            st.session_state.selected_model = model
+    
             # Image size selection restricted to enum values
             image_size = st.selectbox(
                 "Image Size:",
                 image_size_options,
-                index=image_size_options.index("landscape_4_3"),
-                help="Choose the size of the generated image."
+                index=image_size_options.index(st.session_state.selected_image_size),  # Use session state for default
+                help="Choose the size of the generated image.",
+                key="image_size_selectbox"
             )
+            # Update session state when image size changes
+            st.session_state.selected_image_size = image_size
         else:
             # Fixed model for Image-to-Image
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
-
-            # Predefined image sizes as per user instruction
+    
+            # Rest of your Image-to-Image size selection code remains the same
             predefined_sizes = {
                 "square_hd": {"width": 1024, "height": 1024},
                 "square": {"width": 512, "height": 512},
