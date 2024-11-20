@@ -7,6 +7,7 @@ import time
 import uuid
 from datetime import datetime
 import base64
+import httpx  # Added import
 
 # Set page configuration
 st.set_page_config(
@@ -69,7 +70,7 @@ if 'current_generation' not in st.session_state:
 
 if 'uploaded_image' not in st.session_state:
     st.session_state.uploaded_image = None
-    st.session_state.image_data_uri = None
+    st.session_state.image_base64 = None
     st.session_state.image_size_info = None
 
 if 'lora_path' not in st.session_state:
@@ -139,7 +140,7 @@ if api_key:
         
         # Add image_base64 and strength if provided (for Image-to-Image)
         if image_base64:
-            payload["image_url"] = image_base64
+            payload["image"] = image_base64  # Changed 'image_url' to 'image'
             if strength is not None:
                 payload["strength"] = float(strength)
         
@@ -163,21 +164,22 @@ if api_key:
                 payload["image_size"] = image_size  # Use image_size for other models
 
         # Conditionally add inference_steps and guidance_scale
-        if generation_mode == "Text-to-Image":
-            payload["num_inference_steps"] = num_inference_steps
-            payload["guidance_scale"] = guidance_scale
-        else:
-            # For Image-to-Image, exclude these if using a specific model version
-            if model != "fal-ai/flux-pro/v1.1":
-                payload["num_inference_steps"] = num_inference_steps
-                payload["guidance_scale"] = guidance_scale
+        payload["num_inference_steps"] = num_inference_steps
+        payload["guidance_scale"] = guidance_scale
+
+        # Before submitting the request, display the payload for debugging
+        st.write("Payload being sent to the API:")
+        st.json(payload)
 
         # Submit the request
-        handler = fal_client.submit(model, payload)
-        
-        # Wait for the result
-        result = handler.get()
-        
+        try:
+            handler = fal_client.submit(model, payload)
+            # Wait for the result
+            result = handler.get()
+        except httpx.HTTPStatusError as e:
+            status_placeholder.error(f"HTTP error occurred: {e}")
+            raise e  # Re-raise the exception to be caught later
+
         # Calculate total time
         total_time = time.time() - start_time
         status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
