@@ -122,25 +122,25 @@ if api_key:
         # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
-
+    
         # Prepare the request payload
         payload = {
             "prompt": prompt,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
-
+    
         # Add safety_tolerance only for Text-to-Image models
         if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
             payload["safety_tolerance"] = safety_tolerance
-
+    
         # Add seed to payload if provided
         if seed:
             payload["seed"] = int(seed)
         
         # Add image_base64 and strength if provided (for Image-to-Image)
         if image_base64:
-            payload["image"] = image_base64  # Changed 'image_url' to 'image'
+            payload["image"] = image_base64  # Ensure no prefix is included
             if strength is not None:
                 payload["strength"] = float(strength)
         
@@ -162,15 +162,15 @@ if api_key:
                 payload["height"] = image_size["height"]
             else:
                 payload["image_size"] = image_size  # Use image_size for other models
-
-        # Conditionally add inference_steps and guidance_scale
+    
+        # Add inference_steps and guidance_scale
         payload["num_inference_steps"] = num_inference_steps
         payload["guidance_scale"] = guidance_scale
-
+    
         # Before submitting the request, display the payload for debugging
         st.write("Payload being sent to the API:")
         st.json(payload)
-
+    
         # Submit the request
         try:
             handler = fal_client.submit(model, payload)
@@ -179,7 +179,7 @@ if api_key:
         except httpx.HTTPStatusError as e:
             status_placeholder.error(f"HTTP error occurred: {e}")
             raise e  # Re-raise the exception to be caught later
-
+    
         # Calculate total time
         total_time = time.time() - start_time
         status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
