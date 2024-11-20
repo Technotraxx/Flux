@@ -530,11 +530,12 @@ if api_key:
                     # Add to history
                     st.session_state.history.append(st.session_state.current_generation[-1])
                 
-            except fal_client.FalClientError as e:
-                if e.status_code == 422 and "not public" in str(e):
+           except fal_client.FalClientError as e:
+                error_message = str(e)
+                if "not public" in error_message:
                     st.error(f"The selected model '{model}' is not accessible. Please choose a different model or contact support.")
                 else:
-                    st.error(f"An unexpected error occurred: {e}")
+                    st.error(f"An unexpected error occurred: {error_message}")
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
 
