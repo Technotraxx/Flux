@@ -7,7 +7,6 @@ import time
 import uuid
 from datetime import datetime
 import base64
-import httpx  # Added import
 
 # Set page configuration
 st.set_page_config(
@@ -70,7 +69,7 @@ if 'current_generation' not in st.session_state:
 
 if 'uploaded_image' not in st.session_state:
     st.session_state.uploaded_image = None
-    st.session_state.image_base64 = None
+    st.session_state.image_data_uri = None
     st.session_state.image_size_info = None
 
 if 'lora_path' not in st.session_state:
@@ -122,25 +121,25 @@ if api_key:
         # Placeholder for status messages
         status_placeholder = st.empty()
         status_placeholder.info(f"Generating image using {model}...")
-    
+
         # Prepare the request payload
         payload = {
             "prompt": prompt,
             "num_images": num_images,
             "enable_safety_checker": enable_safety_checker
         }
-    
+
         # Add safety_tolerance only for Text-to-Image models
         if generation_mode == "Text-to-Image" and model not in ["fal-ai/flux-general/image-to-image"]:
             payload["safety_tolerance"] = safety_tolerance
-    
+
         # Add seed to payload if provided
         if seed:
             payload["seed"] = int(seed)
         
         # Add image_base64 and strength if provided (for Image-to-Image)
         if image_base64:
-            payload["image"] = image_base64  # Ensure no prefix is included
+            payload["image_url"] = image_base64
             if strength is not None:
                 payload["strength"] = float(strength)
         
@@ -157,29 +156,24 @@ if api_key:
         if model == "fal-ai/flux-pro/v1.1-ultra":
             payload["aspect_ratio"] = image_size["aspect_ratio"]  # Add aspect_ratio at top level
         else:
-            if generation_mode == "Image-to-Image":
-                payload["width"] = image_size["width"]
-                payload["height"] = image_size["height"]
-            else:
-                payload["image_size"] = image_size  # Use image_size for other models
-    
-        # Add inference_steps and guidance_scale
-        payload["num_inference_steps"] = num_inference_steps
-        payload["guidance_scale"] = guidance_scale
-    
-        # Before submitting the request, display the payload for debugging
-        st.write("Payload being sent to the API:")
-        st.json(payload)
-    
+            payload["image_size"] = image_size  # Use image_size for other models
+
+        # Conditionally add inference_steps and guidance_scale
+        if generation_mode == "Text-to-Image":
+            payload["num_inference_steps"] = num_inference_steps
+            payload["guidance_scale"] = guidance_scale
+        else:
+            # For Image-to-Image, exclude these if using a specific model version
+            if model != "fal-ai/flux-pro/v1.1":
+                payload["num_inference_steps"] = num_inference_steps
+                payload["guidance_scale"] = guidance_scale
+
         # Submit the request
-        try:
-            handler = fal_client.submit(model, payload)
-            # Wait for the result
-            result = handler.get()
-        except httpx.HTTPStatusError as e:
-            status_placeholder.error(f"HTTP error occurred: {e}")
-            raise e  # Re-raise the exception to be caught later
-    
+        handler = fal_client.submit(model, payload)
+        
+        # Wait for the result
+        result = handler.get()
+        
         # Calculate total time
         total_time = time.time() - start_time
         status_placeholder.success(f"Image generated successfully using {model}! (Total time: {total_time:.2f} seconds)")
@@ -326,14 +320,14 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
     
-            # Rest of your Image-to-Image size selection code
+            # Rest of your Image-to-Image size selection code remains the same
             predefined_sizes = {
                 "square_hd": {"width": 1024, "height": 1024},
                 "square": {"width": 512, "height": 512},
                 "portrait_4_3": {"width": 768, "height": 1024},
-                "portrait_16_9": {"width": 576, "height": 1024},
+                "portrait_16_9": {"width": 512, "height": 1024},
                 "landscape_4_3": {"width": 1024, "height": 768},
-                "landscape_16_9": {"width": 1024, "height": 576}
+                "landscape_16_9": {"width": 1024, "height": 512}
             }
            
             # Image size selection
@@ -438,6 +432,7 @@ if api_key:
         elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
             st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
         else:
+            # In your generate button click handler, where you prepare the payload:
             try:
                 # Convert seed to integer if provided, otherwise pass None
                 seed_value = None
@@ -533,9 +528,9 @@ if api_key:
                     })
                     
                     # Add to history
-                    st.session_state.history.append(st.session_state.current_generation[-1])         
-
-            except fal_client.FalClientError as e:
+                    st.session_state.history.append(st.session_state.current_generation[-1])
+                
+           except fal_client.FalClientError as e:
                 error_message = str(e)
                 if "not public" in error_message:
                     st.error(f"The selected model '{model}' is not accessible. Please choose a different model or contact support.")
@@ -543,7 +538,6 @@ if api_key:
                     st.error(f"An unexpected error occurred: {error_message}")
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
-
 
     # Display current generation
     if st.session_state.current_generation:
@@ -600,7 +594,7 @@ if api_key:
                     else:
                         st.write("**Generated at:** Not available")
                     st.write("**Safety Checker:**", "Enabled" if item.get('enable_safety_checker', True) else "Disabled")
-                    st.write("**Image Size:**", item.get('image_size', 'N/A'))
+                    st.write("**Image Size:**", item.get('image_size', 'N/A'))  # Added image size
                     if 'download' not in item:
                         # Create a download button for the image
                         img_byte_arr = BytesIO()
