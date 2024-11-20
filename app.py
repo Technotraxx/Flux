@@ -156,7 +156,11 @@ if api_key:
         if model == "fal-ai/flux-pro/v1.1-ultra":
             payload["aspect_ratio"] = image_size["aspect_ratio"]  # Add aspect_ratio at top level
         else:
-            payload["image_size"] = image_size  # Use image_size for other models
+            if generation_mode == "Image-to-Image":
+                payload["width"] = image_size["width"]
+                payload["height"] = image_size["height"]
+            else:
+                payload["image_size"] = image_size  # Use image_size for other models
 
         # Conditionally add inference_steps and guidance_scale
         if generation_mode == "Text-to-Image":
@@ -320,14 +324,14 @@ if api_key:
             model = "fal-ai/flux-general/image-to-image"
             st.markdown(f"**Model:** {model}")
     
-            # Rest of your Image-to-Image size selection code remains the same
+            # Rest of your Image-to-Image size selection code
             predefined_sizes = {
                 "square_hd": {"width": 1024, "height": 1024},
                 "square": {"width": 512, "height": 512},
                 "portrait_4_3": {"width": 768, "height": 1024},
-                "portrait_16_9": {"width": 512, "height": 1024},
+                "portrait_16_9": {"width": 576, "height": 1024},
                 "landscape_4_3": {"width": 1024, "height": 768},
-                "landscape_16_9": {"width": 1024, "height": 512}
+                "landscape_16_9": {"width": 1024, "height": 576}
             }
            
             # Image size selection
@@ -432,7 +436,6 @@ if api_key:
         elif generation_mode == "Image-to-Image" and (not lora_path_input or not lora_scale_input):
             st.error("Please provide both LoRA path and LoRA scale for Image-to-Image generation.")
         else:
-            # In your generate button click handler, where you prepare the payload:
             try:
                 # Convert seed to integer if provided, otherwise pass None
                 seed_value = None
@@ -595,7 +598,7 @@ if api_key:
                     else:
                         st.write("**Generated at:** Not available")
                     st.write("**Safety Checker:**", "Enabled" if item.get('enable_safety_checker', True) else "Disabled")
-                    st.write("**Image Size:**", item.get('image_size', 'N/A'))  # Added image size
+                    st.write("**Image Size:**", item.get('image_size', 'N/A'))
                     if 'download' not in item:
                         # Create a download button for the image
                         img_byte_arr = BytesIO()
