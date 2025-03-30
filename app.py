@@ -95,9 +95,14 @@ ULTRA_SIZE_MAP = {
 if api_key:
     set_api_key(api_key)
     try:
-        import fal_client
+        # UPDATED: Import the new client package
+        import fal.client as fal
+        # Configure the client with the API key
+        fal.config({
+            "credentials": api_key
+        })
     except ImportError:
-        st.error("The 'fal_client' module is not installed. Please install it using `pip install fal-client`.")
+        st.error("The 'fal' module is not installed. Please install it using `pip install fal-client`.")
         st.stop()
 
     # Function to generate image
@@ -168,11 +173,27 @@ if api_key:
                 payload["num_inference_steps"] = num_inference_steps
                 payload["guidance_scale"] = guidance_scale
 
-        # Submit the request
-        handler = fal_client.submit(model, payload)
-        
-        # Wait for the result
-        result = handler.get()
+        # UPDATED: Submit the request using the new API
+        try:
+            # Use subscribe method for real-time updates
+            response = fal.subscribe(
+                model, 
+                {
+                    "input": payload,
+                    "logs": True,
+                    "onQueueUpdate": lambda update: status_placeholder.info(f"Status: {update['status']}")
+                }
+            )
+            
+            # Extract data from the response
+            result = response.data
+            request_id = response.requestId
+            
+            # Log request ID for debugging
+            print(f"Request ID: {request_id}")
+        except Exception as e:
+            status_placeholder.error(f"Error in API call: {str(e)}")
+            raise e
         
         # Calculate total time
         total_time = time.time() - start_time
@@ -530,7 +551,7 @@ if api_key:
                     # Add to history
                     st.session_state.history.append(st.session_state.current_generation[-1])         
 
-            except fal_client.FalClientError as e:
+            except Exception as e:
                 error_message = str(e)
                 if "not public" in error_message:
                     st.error(f"The selected model '{model}' is not accessible. Please choose a different model or contact support.")
