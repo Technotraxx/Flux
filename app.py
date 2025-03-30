@@ -95,14 +95,11 @@ ULTRA_SIZE_MAP = {
 if api_key:
     set_api_key(api_key)
     try:
-        # UPDATED: Import the new client package
-        import fal.client as fal
-        # Configure the client with the API key
-        fal.config({
-            "credentials": api_key
-        })
+        # Using fal-client 0.5.9
+        import fal_client
+        # No need to explicitly configure with credentials, as set_api_key already did that
     except ImportError:
-        st.error("The 'fal' module is not installed. Please install it using `pip install fal-client`.")
+        st.error("The 'fal_client' module is not installed. Please install it using `pip install fal-client`.")
         st.stop()
 
     # Function to generate image
@@ -173,24 +170,16 @@ if api_key:
                 payload["num_inference_steps"] = num_inference_steps
                 payload["guidance_scale"] = guidance_scale
 
-        # UPDATED: Submit the request using the new API
+        # Submit the request using fal-client 0.5.9
         try:
-            # Use subscribe method for real-time updates
-            response = fal.subscribe(
-                model, 
-                {
-                    "input": payload,
-                    "logs": True,
-                    "onQueueUpdate": lambda update: status_placeholder.info(f"Status: {update['status']}")
-                }
-            )
+            # Use the original submit and get methods
+            handler = fal_client.submit(model, payload)
             
-            # Extract data from the response
-            result = response.data
-            request_id = response.requestId
+            # Wait for the result
+            result = handler.get()
             
-            # Log request ID for debugging
-            print(f"Request ID: {request_id}")
+            # Log for debugging
+            print(f"Request submitted successfully")
         except Exception as e:
             status_placeholder.error(f"Error in API call: {str(e)}")
             raise e
